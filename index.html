@@ -779,12 +779,20 @@
         }
 
         // Attach click handlers to icons with data-target for robust toggle
-        document.addEventListener('DOMContentLoaded', () => {
+        function attachPasswordToggleHandlers() {
             document.querySelectorAll('i.toggle-password[data-target]').forEach(icon => {
                 const target = icon.getAttribute('data-target');
-                icon.addEventListener('click', () => togglePassword(target, icon));
+                icon.addEventListener('click', (e) => {
+                    e.preventDefault();
+                    togglePassword(target, icon);
+                });
             });
-        });
+        }
+        if (document.readyState === 'loading') {
+            document.addEventListener('DOMContentLoaded', attachPasswordToggleHandlers);
+        } else {
+            attachPasswordToggleHandlers();
+        }
 
         function validateEmail(email) {
             // Must be a valid Gmail address
@@ -1036,7 +1044,7 @@
         }
 
         // Live confirm-password validation
-        document.addEventListener('DOMContentLoaded', () => {
+        function attachConfirmPasswordValidation() {
             const pwd = document.getElementById('signupPassword');
             const confirm = document.getElementById('signupConfirmPassword');
             if (pwd && confirm) {
@@ -1050,7 +1058,12 @@
                 pwd.addEventListener('input', checker);
                 confirm.addEventListener('input', checker);
             }
-        });
+        }
+        if (document.readyState === 'loading') {
+            document.addEventListener('DOMContentLoaded', attachConfirmPasswordValidation);
+        } else {
+            attachConfirmPasswordValidation();
+        }
 
         function submitVerification() {
             verifyCode();
