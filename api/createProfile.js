@@ -14,7 +14,8 @@ module.exports = async (req, res) => {
     return res.status(400).json({ error: 'Missing required fields' });
   }
 
-  const url = `${process.env.SUPABASE_URL}/rest/v1/profiles`;
+  const supabaseUrl = (process.env.SUPABASE_URL || '').replace(/\/+$/, '');
+  const url = `${supabaseUrl}/rest/v1/profiles`;
   const key = process.env.SUPABASE_SERVICE_ROLE_KEY;
 
   if (!url || !key) {
@@ -22,10 +23,13 @@ module.exports = async (req, res) => {
   }
 
   try {
+    // quick runtime check (do not log the actual key)
+    console.log('createProfile: supabaseUrl set?', !!supabaseUrl, 'serviceRole set?', !!key);
     const response = await fetch(url, {
       method: 'POST',
       headers: {
         'Authorization': `Bearer ${key}`,
+        'apikey': key,
         'Content-Type': 'application/json',
         'Prefer': 'return=minimal'
       },
