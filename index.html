@@ -895,9 +895,9 @@
                             showToast(error.message, 'error');
                             setLoading('loginBtn', false);
                         } else {
-                            if (data.user && !data.user.email_confirmed) {
+                            // signInWithPassword returns a session when successful
+                            if (!data || !data.session) {
                                 showToast('Please verify your email first', 'error');
-                                supabase.auth.signOut();
                                 setLoading('loginBtn', false);
                             } else {
                                 window.location.href = 'app.html';
@@ -1144,12 +1144,24 @@
             }, 3000);
         }
 
-        // Check if already logged in
-        window.onload = function() {
-            const currentUser = localStorage.getItem('currentUser');
-            if (currentUser) {
-                window.location.href = 'app.html';
+        // Check if already logged in (use Supabase session when available)
+        window.onload = async function() {
+            try {
+                const supabase = window.supabase;
+                if (supabase) {
+                    const { data: { session } } = await supabase.auth.getSession();
+                    if (session && session.user) {
+                        window.location.href = 'app.html';
+                        return;
+                    }
+                }
+            } catch (e) {
+                console.warn('session check failed', e.message);
             }
+
+            // fallback to demo/localStorage behavior
+            const currentUser = localStorage.getItem('currentUser');
+            if (currentUser) window.location.href = 'app.html';
         };
     </script>
 </body>

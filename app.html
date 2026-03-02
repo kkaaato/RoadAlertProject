@@ -17,12 +17,26 @@
     <!-- initialize supabase client using same helper -->
     <script type="module">
         import { initSupabase, getSupabase } from './auth.js';
-        try {
-            initSupabase();
-            window.supabase = getSupabase();
-        } catch (err) {
-            console.warn('Supabase initialization failed in app.html', err.message);
-        }
+        (async () => {
+            try {
+                // fetch keys from serverless endpoint (Vercel) if available
+                try {
+                    const res = await fetch('/api/env');
+                    if (res.ok) {
+                        const cfg = await res.json();
+                        if (cfg.supabaseUrl) window.SUPABASE_URL = cfg.supabaseUrl;
+                        if (cfg.supabaseAnonKey) window.SUPABASE_ANON_KEY = cfg.supabaseAnonKey;
+                    }
+                } catch (e) {
+                    // ignore; fall back to build-time or hardcoded values
+                }
+
+                initSupabase();
+                window.supabase = getSupabase();
+            } catch (err) {
+                console.warn('Supabase initialization failed in app.html', err.message);
+            }
+        })();
     </script>
 
     <style>
