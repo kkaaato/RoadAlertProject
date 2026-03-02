@@ -14,6 +14,17 @@
     <!-- QR Code Library -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
 
+    <!-- initialize supabase client using same helper -->
+    <script type="module">
+        import { initSupabase, getSupabase } from './auth.js';
+        try {
+            initSupabase();
+            window.supabase = getSupabase();
+        } catch (err) {
+            console.warn('Supabase initialization failed in app.html', err.message);
+        }
+    </script>
+
     <style>
         * {
             margin: 0;
@@ -829,6 +840,8 @@
 
     <script>
         // ==================== CONFIGURATION ====================
+        // Firebase configuration was previously here but is unused now.
+        /*
         const firebaseConfig = {
             apiKey: "YOUR_API_KEY",
             authDomain: "YOUR_PROJECT_ID.firebaseapp.com",
@@ -842,6 +855,11 @@
         // firebase.initializeApp(firebaseConfig);
         // const auth = firebase.auth();
         // const db = firebase.firestore();
+        */
+
+        // ensure Supabase client is ready
+        const supabase = window.supabase || null; // injected by index.html on login
+        if (!supabase) console.warn('Supabase client not found; authentication will fail');
 
         // ==================== GLOBAL VARIABLES ====================
         let map;
@@ -853,7 +871,7 @@
         let isAddingPin = false;
         let currentMapTheme = 'standard';
         let mapLayers = {};
-        let demoMode = true;
+        let demoMode = false; // set true only for offline testing
         let demoPins = [];
 
         // Map themes
@@ -896,24 +914,42 @@
             }, 30000);
         });
 
-        function checkAuth() {
-            // Check local storage for demo user
-            const userData = localStorage.getItem('currentUser');
-            if (!userData) {
-                // Not logged in, redirect to login
-                window.location.href = 'index.html';
-                return;
+        async function checkAuth() {
+            if (demoMode) {
+                const userData = localStorage.getItem('currentUser');
+                if (!userData) {
+                    window.location.href = 'index.html';
+                    return;
+                }
+                currentUser = JSON.parse(userData);
+                document.getElementById('userDisplay').textContent = currentUser.displayName || currentUser.email;
+            } else {
+                if (!supabase) {
+                    window.location.href = 'index.html';
+                    return;
+                }
+                const { data: { session } } = await supabase.auth.getSession();
+                if (!session || !session.user) {
+                    window.location.href = 'index.html';
+                    return;
+                }
+                currentUser = {
+                    uid: session.user.id,
+                    email: session.user.email,
+                    displayName: session.user.user_metadata?.username || session.user.email
+                };
+                document.getElementById('userDisplay').textContent = currentUser.displayName;
             }
-
-            currentUser = JSON.parse(userData);
-            document.getElementById('userDisplay').textContent = currentUser.displayName || currentUser.email;
         }
 
-        function logout() {
-            localStorage.removeItem('currentUser');
+        async function logout() {
+            if (demoMode) {
+                localStorage.removeItem('currentUser');
+            } else if (supabase) {
+                await supabase.auth.signOut();
+            }
             window.location.href = 'index.html';
         }
-
         // ==================== MAP FUNCTIONS ====================
         function initMap() {
             // Center on Philippines (Manila)
@@ -1009,6 +1045,21 @@
                 closePinModal();
                 showToast('Report submitted successfully!');
                 updateStats();
+            } else {
+                const supabase = window.supabase;
+                supabase.from('pins').insert(pinData)
+                    .then(({ data, error }) => {
+                        if (error) {
+                            console.error('insert pin error', error.message);
+                            showToast('Failed to submit report', 'error');
+                        } else {
+                            addPinToMap(data[0]);
+                            updatePinsList();
+                            closePinModal();
+                            showToast('Report submitted successfully!');
+                            updateStats();
+                        }
+                    });
             }
         }
 
@@ -1168,6 +1219,22 @@
         }
 
         function loadPins() {
+            if (!demoMode) {
+                const supabase = window.supabase;
+                supabase.from('pins').select('*')
+                    .then(({ data, error }) => {
+                        if (error) {
+                            console.error('failed to load pins', error.message);
+                            return;
+                        }
+                        data.forEach(pin => {
+                            addPinToMap(pin);
+                            pinsData[pin.id] = pin;
+                        });
+                        updateStats();
+                    });
+                return;
+            }
             // Demo pins around Philippines
             const demoData = [
                 {
