@@ -467,7 +467,7 @@
             }
         }
     </style>
-<base target="_blank">
+<base target="_self">
 </head>
 <body>
     <!-- Left Side - Branding -->
@@ -595,7 +595,7 @@
                             <input type="password" id="signupConfirmPassword" required placeholder="Confirm your password">
                             <i class="fas fa-eye toggle-password" onclick="togglePassword('signupConfirmPassword', this)"></i>
                         </div>
-                        <span class="error-message" id="signupConfirmError">Passwords do not match</span>
+                        <span class="error-message" id="signupConfirmPasswordError">Passwords do not match</span>
                     </div>
 
                     <button type="submit" class="btn-primary" id="signupBtn">
@@ -942,10 +942,10 @@
             }
 
             if (password !== confirmPassword) {
-                showError('signupConfirm', true);
+                showError('signupConfirmPassword', true);
                 hasError = true;
             } else {
-                showError('signupConfirm', false);
+                showError('signupConfirmPassword', false);
             }
 
             // Check if email exists
