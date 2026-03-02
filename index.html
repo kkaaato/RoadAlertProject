@@ -986,8 +986,26 @@
                             return;
                         }
                         const userId = data.user.id;
-                        const { error: profileErr } = await supabase.from('profiles').insert({ id: userId, username, email });
-                        if (profileErr) console.warn('profile insert error', profileErr.message);
+
+                        // Call serverless function to create profile with admin privileges
+                        try {
+                            const profileRes = await fetch('/api/createProfile', {
+                                method: 'POST',
+                                headers: { 'Content-Type': 'application/json' },
+                                body: JSON.stringify({ userId, username, email })
+                            });
+                            if (!profileRes.ok) {
+                                let bodyText = await profileRes.text();
+                                try { bodyText = JSON.parse(bodyText); } catch(e) {}
+                                console.warn('profile insert error', profileRes.status, bodyText);
+                                showToast('Profile creation failed (server). See console for details.', 'error');
+                            } else {
+                                console.log('profile created successfully');
+                            }
+                        } catch (e) {
+                            console.warn('profile insert fetch error', e.message);
+                            showToast('Profile creation network error', 'error');
+                        }
 
                         showToast('Signup successful! Please check your email to verify your account.', 'success');
                         switchTab('login');

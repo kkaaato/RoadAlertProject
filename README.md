@@ -35,15 +35,26 @@ The `auth.js` in this project supports reading the keys from `window.SUPABASE_UR
 
 When you deploy to Vercel, set the following `Environment Variables` in the project settings (they will be injected at runtime to any serverless function):
 
-- `SUPABASE_URL` — your project URL
-- `SUPABASE_ANON_KEY` — your public anon key (required by client)
-- `SUPABASE_SERVICE_ROLE_KEY` — **only** if you plan to run serverless functions that need admin privileges (not used by the client)
+**Settings → Environment Variables** — add these three:
 
-We added a tiny serverless endpoint (`/api/env`) that reads the first two values and returns them as JSON. The front‑end calls this endpoint at load time to get the keys without hard‑coding them into `index.html`. Running locally the endpoint will return nothing, so the script falls back to the placeholder strings; replace them manually or configure your own simple dev server.
+1. `SUPABASE_URL`  
+   Value: Copy from Supabase Dashboard → Settings → API → "Project URL"  
+   Example: `https://laabacfnbqfaqstsffmw.supabase.co`
 
-Do **not** expose the service role key in any client bundles; keep it available to Edge/Serverless functions only.
+2. `SUPABASE_ANON_KEY`  
+   Value: Copy from Supabase Dashboard → Settings → API → `anon` (public) key  
+   Example: Long base64 string starting with `eyJhbGciOi...`
 
-Vercel will automatically provide these as `process.env.*` inside functions and during build.
+3. `SUPABASE_SERVICE_ROLE_KEY` *(required for profile creation)*  
+   Value: Copy from Supabase Dashboard → Settings → API → `service_role` (secret) key  
+   Example: Long base64 string (longer than anon key)
+
+**Important:** Do NOT accidentally swap these keys. The `service_role` should be longer and is your *admin* key.
+
+Our functions use them as follows:
+- `/api/env` reads `SUPABASE_URL` and `SUPABASE_ANON_KEY` to send to the browser.
+- `/api/createProfile` uses `SUPABASE_SERVICE_ROLE_KEY` server-side to bypass RLS and insert user profiles.
+- The browser client uses the `SUPABASE_ANON_KEY` only and respects RLS policies.
 
 
 Temporarily for the session:
@@ -79,8 +90,12 @@ Enable row‑level security and add a policy allowing authenticated users to ins
 
 ```sql
 alter table profiles enable row level security;
-create policy "Insert own profile" on profiles
+create policy "Users can insert own profile" on profiles
   for insert with check (auth.uid() = id);
+create policy "Users can read own profile" on profiles
+  for select using (auth.uid() = id OR true);
+create policy "Users can update own profile" on profiles
+  for update using (auth.uid() = id);
 ```
 
 The frontend sign‑up flow inserts a record into this table after creating the user account.
@@ -117,6 +132,24 @@ create policy "Select pins" on pins for select using (true);
 ```
 
 The application’s client code now inserts and selects from this table directly via Supabase.
+
+### Troubleshooting common errors
+
+**Error: "Failed to load resource: the server responded with a status of 400"** (on token endpoint)  
+→ Your Supabase credentials (URL or ANON_KEY) are wrong. Double-check they match what's in Supabase Settings → API.  
+→ Make sure you copied the full strings with no accidental spaces or line breaks.
+
+**Error: "RLS policy violates" on profile insert**  
+→ The `profiles` table RLS policies are not set up correctly.  
+→ Run the SQL in the "Database schema notes" section below to ensure the table and policies exist.
+
+**Error: "401 Unauthorized" on REST calls**  
+→ Your Supabase keys are missing or misconfigured in Vercel environment variables.  
+→ Verify in Vercel Dashboard: Settings → Environment Variables that all three vars are present.
+
+**Looping between login & dashboard**  
+→ Usually means Supabase failed to initialize. Check browser console for errors.  
+→ Clear browser cache, reload, and check the network tab in DevTools.
 
 ### Immediate security steps if a key was exposed
 - Rotate/regenerate keys in the Supabase Dashboard: Settings → API → Regenerate keys.
