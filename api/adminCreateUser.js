@@ -33,6 +33,7 @@ module.exports = async (req, res) => {
       body: JSON.stringify({
         email,
         password,
+        email_confirm: true,
         user_metadata: { username }
       })
     });
