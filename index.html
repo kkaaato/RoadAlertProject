@@ -768,13 +768,15 @@
             if (!input) return;
             // resolve icon element if not provided
             if (!icon) {
-                icon = document.querySelector('i.toggle-password[data-target="' + inputId + '"]') || document.querySelector('i.toggle-password');
+                icon = document.querySelector('i.toggle-password[data-target="' + inputId + '"]');
             }
-            const showing = input.type === 'text';
-            input.type = showing ? 'password' : 'text';
+            // Toggle: if password, show it; if text, hide it
+            const isCurrentlyPassword = input.type === 'password';
+            input.type = isCurrentlyPassword ? 'text' : 'password';
+            // After toggle, update icon to reflect new state
             if (icon && icon.classList) {
-                icon.classList.toggle('fa-eye', showing);
-                icon.classList.toggle('fa-eye-slash', !showing);
+                icon.classList.toggle('fa-eye', !isCurrentlyPassword);      // show eye when text is visible
+                icon.classList.toggle('fa-eye-slash', isCurrentlyPassword);  // show eye-slash when hidden
             }
         }
 
@@ -782,10 +784,18 @@
         function attachPasswordToggleHandlers() {
             document.querySelectorAll('i.toggle-password[data-target]').forEach(icon => {
                 const target = icon.getAttribute('data-target');
+                const input = document.getElementById(target);
+                // Set initial icon state based on input type
+                if (input) {
+                    const isPassword = input.type === 'password';
+                    icon.classList.toggle('fa-eye', !isPassword);
+                    icon.classList.toggle('fa-eye-slash', isPassword);
+                }
                 icon.addEventListener('click', (e) => {
                     e.preventDefault();
+                    e.stopPropagation();
                     togglePassword(target, icon);
-                });
+                }, false);
             });
         }
         if (document.readyState === 'loading') {
@@ -959,8 +969,14 @@
                 showError('signupPassword', false);
             }
 
-            if (password !== confirmPassword) {
+            // CRITICAL: Check confirm password BEFORE proceeding
+            if (!confirmPassword) {
                 showError('signupConfirmPassword', true);
+                document.getElementById('signupConfirmPasswordError').textContent = 'Please confirm your password';
+                hasError = true;
+            } else if (password !== confirmPassword) {
+                showError('signupConfirmPassword', true);
+                document.getElementById('signupConfirmPasswordError').textContent = 'Passwords do not match';
                 hasError = true;
             } else {
                 showError('signupConfirmPassword', false);
@@ -973,7 +989,10 @@
                 hasError = true;
             }
 
-            if (hasError) return;
+            if (hasError) {
+                showToast('Please fix the errors above', 'error');
+                return;
+            }
 
             setLoading('signupBtn', true);
 
