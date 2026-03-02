@@ -918,7 +918,17 @@
         };
 
         // ==================== INITIALIZATION ====================
-        document.addEventListener('DOMContentLoaded', function() {
+        // Wait for Supabase to be ready before checking auth
+        async function waitForSupabase(maxWait = 5000) {
+            const startTime = Date.now();
+            while (!window.supabase && (Date.now() - startTime < maxWait)) {
+                await new Promise(resolve => setTimeout(resolve, 100));
+            }
+            return !!window.supabase;
+        }
+
+        document.addEventListener('DOMContentLoaded', async function() {
+            await waitForSupabase();
             checkAuth();
             initMap();
             loadPins();
@@ -938,29 +948,37 @@
                 currentUser = JSON.parse(userData);
                 document.getElementById('userDisplay').textContent = currentUser.displayName || currentUser.email;
             } else {
-                if (!supabase) {
+                const sb = window.supabase;
+                if (!sb) {
+                    console.error('Supabase not initialized; cannot check auth');
                     window.location.href = 'index.html';
                     return;
                 }
-                const { data: { session } } = await supabase.auth.getSession();
-                if (!session || !session.user) {
+                try {
+                    const { data: { session }, error } = await sb.auth.getSession();
+                    if (error) throw error;
+                    if (!session || !session.user) {
+                        window.location.href = 'index.html';
+                        return;
+                    }
+                    currentUser = {
+                        uid: session.user.id,
+                        email: session.user.email,
+                        displayName: session.user.user_metadata?.username || session.user.email
+                    };
+                    document.getElementById('userDisplay').textContent = currentUser.displayName;
+                } catch (err) {
+                    console.error('checkAuth error:', err.message);
                     window.location.href = 'index.html';
-                    return;
                 }
-                currentUser = {
-                    uid: session.user.id,
-                    email: session.user.email,
-                    displayName: session.user.user_metadata?.username || session.user.email
-                };
-                document.getElementById('userDisplay').textContent = currentUser.displayName;
             }
         }
 
         async function logout() {
             if (demoMode) {
                 localStorage.removeItem('currentUser');
-            } else if (supabase) {
-                await supabase.auth.signOut();
+            } else if (window.supabase) {
+                await window.supabase.auth.signOut();
             }
             window.location.href = 'index.html';
         }

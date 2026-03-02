@@ -713,8 +713,8 @@
             await loadSupabaseKeys();
             try {
                 initSupabase()
-                // expose the client so other scripts can use it
                 window.supabase = getSupabase()
+                console.log('Supabase initialized in index.html')
             } catch (err) {
                 console.warn('Supabase not initialized:', err.message)
             }
@@ -1144,25 +1144,9 @@
             }, 3000);
         }
 
-        // Check if already logged in (use Supabase session when available)
-        window.onload = async function() {
-            try {
-                const supabase = window.supabase;
-                if (supabase) {
-                    const { data: { session } } = await supabase.auth.getSession();
-                    if (session && session.user) {
-                        window.location.href = 'app.html';
-                        return;
-                    }
-                }
-            } catch (e) {
-                console.warn('session check failed', e.message);
-            }
-
-            // fallback to demo/localStorage behavior
-            const currentUser = localStorage.getItem('currentUser');
-            if (currentUser) window.location.href = 'app.html';
-        };
+        // On index.html, simply show the login form.
+        // Redirect only happens after user successfully logs in.
+        // (Removed auto-redirect to prevent loop)
     </script>
 </body>
 </html>
