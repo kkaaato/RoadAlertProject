@@ -508,8 +508,8 @@
                 </div>
 
                 <div class="auth-tabs">
-                    <button class="auth-tab active" onclick="switchTab('login')">Login</button>
-                    <button class="auth-tab" onclick="switchTab('signup')">Sign Up</button>
+                    <button class="auth-tab active" onclick="switchTab('login')" data-switch="login">Login</button>
+                    <button class="auth-tab" onclick="switchTab('signup')" data-switch="signup">Sign Up</button>
                 </div>
 
                 <form onsubmit="handleLogin(event)">
@@ -542,7 +542,7 @@
                 </form>
 
                 <div class="auth-footer">
-                    <p>Don't have an account? <a onclick="switchTab('signup')">Create one</a></p>
+                    <p>Don't have an account? <a href="#" onclick="switchTab('signup')" data-switch="signup">Create one</a></p>
                 </div>
             </div>
 
@@ -554,8 +554,8 @@
                 </div>
 
                 <div class="auth-tabs">
-                    <button class="auth-tab" onclick="switchTab('login')">Login</button>
-                    <button class="auth-tab active" onclick="switchTab('signup')">Sign Up</button>
+                    <button class="auth-tab" onclick="switchTab('login')" data-switch="login">Login</button>
+                    <button class="auth-tab active" onclick="switchTab('signup')" data-switch="signup">Sign Up</button>
                 </div>
 
                 <form onsubmit="handleSignup(event)">
@@ -604,7 +604,7 @@
                 </form>
 
                 <div class="auth-footer">
-                    <p>Already have an account? <a onclick="switchTab('login')">Sign in</a></p>
+                    <p>Already have an account? <a href="#" onclick="switchTab('login')" data-switch="login">Sign in</a></p>
                 </div>
             </div>
 
@@ -1157,6 +1157,46 @@
         // On index.html, simply show the login form.
         // Redirect only happens after user successfully logs in.
         // (Removed auto-redirect to prevent loop)
+    </script>
+    <script>
+        // Robust fallback: attach click listeners to any element with data-switch
+        (function(){
+            function safeSwitch(tab){
+                try{
+                    // existing global function if defined
+                    if (typeof switchTab === 'function') {
+                        switchTab(tab);
+                        console.log('safeSwitch: used existing switchTab for', tab);
+                        return;
+                    }
+                    // fallback implementation
+                    document.getElementById('loginSection').classList.add('hidden');
+                    document.getElementById('signupSection').classList.add('hidden');
+                    document.getElementById('verificationSection').classList.remove('active');
+                    document.getElementById('forgotPasswordSection').classList.remove('active');
+                    document.getElementById('resetSuccessSection').classList.remove('active');
+                    if (tab === 'login') document.getElementById('loginSection').classList.remove('hidden');
+                    else document.getElementById('signupSection').classList.remove('hidden');
+                    console.log('safeSwitch: fallback switched to', tab);
+                } catch (e) {
+                    console.error('safeSwitch error', e);
+                }
+            }
+
+            document.addEventListener('click', function(e){
+                var el = e.target;
+                // walk up to find element with data-switch
+                while(el && el !== document.body){
+                    var target = el.getAttribute && el.getAttribute('data-switch');
+                    if (target){
+                        e.preventDefault();
+                        safeSwitch(target);
+                        return;
+                    }
+                    el = el.parentNode;
+                }
+            });
+        })();
     </script>
 </body>
 </html>
