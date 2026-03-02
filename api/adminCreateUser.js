@@ -62,7 +62,7 @@ module.exports = async (req, res) => {
         'apikey': serviceRole,
         'Prefer': 'return=minimal'
       },
-      body: JSON.stringify({ id: userId, user_id: userId, username, email, created_at: new Date().toISOString() })
+      body: JSON.stringify({ id: userId, username, email, created_at: new Date().toISOString() })
     });
 
     if (!insertRes.ok) {
