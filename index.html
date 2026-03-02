@@ -765,14 +765,16 @@
 
         function togglePassword(inputId, icon) {
             const input = document.getElementById(inputId);
-            if (input.type === 'password') {
-                input.type = 'text';
-                icon.classList.remove('fa-eye');
-                icon.classList.add('fa-eye-slash');
-            } else {
-                input.type = 'password';
-                icon.classList.remove('fa-eye-slash');
-                icon.classList.add('fa-eye');
+            if (!input) return;
+            // resolve icon element if not provided
+            if (!icon) {
+                icon = document.querySelector('i.toggle-password[onclick*="' + inputId + '"]') || document.querySelector('i.toggle-password');
+            }
+            const showing = input.type === 'text';
+            input.type = showing ? 'password' : 'text';
+            if (icon && icon.classList) {
+                icon.classList.toggle('fa-eye', showing);
+                icon.classList.toggle('fa-eye-slash', !showing);
             }
         }
 
@@ -979,6 +981,12 @@
             } else {
                 // Use server-side admin create so we avoid email verification requirement
                 try {
+                    // double-check confirm password before sending to server
+                    if (password !== confirmPassword) {
+                        showToast('Passwords do not match', 'error');
+                        setLoading('signupBtn', false);
+                        return;
+                    }
                     const res = await fetch('/api/adminCreateUser', {
                         method: 'POST',
                         headers: { 'Content-Type': 'application/json' },
