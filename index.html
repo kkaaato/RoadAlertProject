@@ -527,7 +527,7 @@
                         <div class="input-wrapper">
                             <i class="fas fa-lock"></i>
                             <input type="password" id="loginPassword" required placeholder="Enter your password">
-                            <i class="fas fa-eye toggle-password" onclick="togglePassword('loginPassword', this)"></i>
+                            <i class="fas fa-eye toggle-password" data-target="loginPassword"></i>
                         </div>
                         <span class="error-message" id="loginPasswordError">Password is required</span>
                     </div>
@@ -583,7 +583,7 @@
                         <div class="input-wrapper">
                             <i class="fas fa-lock"></i>
                             <input type="password" id="signupPassword" required placeholder="Create a password (min 6 characters)">
-                            <i class="fas fa-eye toggle-password" onclick="togglePassword('signupPassword', this)"></i>
+                            <i class="fas fa-eye toggle-password" data-target="signupPassword"></i>
                         </div>
                         <span class="error-message" id="signupPasswordError">Password must be at least 6 characters</span>
                     </div>
@@ -593,7 +593,7 @@
                         <div class="input-wrapper">
                             <i class="fas fa-lock"></i>
                             <input type="password" id="signupConfirmPassword" required placeholder="Confirm your password">
-                            <i class="fas fa-eye toggle-password" onclick="togglePassword('signupConfirmPassword', this)"></i>
+                            <i class="fas fa-eye toggle-password" data-target="signupConfirmPassword"></i>
                         </div>
                         <span class="error-message" id="signupConfirmPasswordError">Passwords do not match</span>
                     </div>
@@ -768,7 +768,7 @@
             if (!input) return;
             // resolve icon element if not provided
             if (!icon) {
-                icon = document.querySelector('i.toggle-password[onclick*="' + inputId + '"]') || document.querySelector('i.toggle-password');
+                icon = document.querySelector('i.toggle-password[data-target="' + inputId + '"]') || document.querySelector('i.toggle-password');
             }
             const showing = input.type === 'text';
             input.type = showing ? 'password' : 'text';
@@ -777,6 +777,14 @@
                 icon.classList.toggle('fa-eye-slash', !showing);
             }
         }
+
+        // Attach click handlers to icons with data-target for robust toggle
+        document.addEventListener('DOMContentLoaded', () => {
+            document.querySelectorAll('i.toggle-password[data-target]').forEach(icon => {
+                const target = icon.getAttribute('data-target');
+                icon.addEventListener('click', () => togglePassword(target, icon));
+            });
+        });
 
         function validateEmail(email) {
             // Must be a valid Gmail address
@@ -1003,6 +1011,7 @@
                         return;
                     }
 
+                    console.log('adminCreateUser response:', body);
                     showToast('Account created! You can now sign in.', 'success');
                     switchTab('login');
                     setLoading('signupBtn', false);
@@ -1025,6 +1034,23 @@
         function validateCodeInput(input) {
             input.value = input.value.replace(/[^0-9]/g, '');
         }
+
+        // Live confirm-password validation
+        document.addEventListener('DOMContentLoaded', () => {
+            const pwd = document.getElementById('signupPassword');
+            const confirm = document.getElementById('signupConfirmPassword');
+            if (pwd && confirm) {
+                const checker = () => {
+                    if (confirm.value && pwd.value !== confirm.value) {
+                        showError('signupConfirmPassword', true);
+                    } else {
+                        showError('signupConfirmPassword', false);
+                    }
+                };
+                pwd.addEventListener('input', checker);
+                confirm.addEventListener('input', checker);
+            }
+        });
 
         function submitVerification() {
             verifyCode();

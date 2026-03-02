@@ -62,17 +62,18 @@ module.exports = async (req, res) => {
         'apikey': serviceRole,
         'Prefer': 'return=minimal'
       },
-      body: JSON.stringify({ user_id: userId, username, email })
+      body: JSON.stringify({ id: userId, user_id: userId, username, email, created_at: new Date().toISOString() })
     });
 
     if (!insertRes.ok) {
       const txt = await insertRes.text();
       console.error('adminCreateUser: profile insert failed', insertRes.status, txt);
-      return res.status(insertRes.status).json({ error: txt });
+      return res.status(insertRes.status).json({ error: txt, createUser: createBody });
     }
 
-    // Success
-    res.status(200).json({ success: true, userId });
+    const insertText = await insertRes.text().catch(() => null);
+    // Success - return debug info (non-secret)
+    res.status(200).json({ success: true, userId, createdUser: createBody, profileInsert: insertText || null });
   } catch (err) {
     console.error('adminCreateUser error', err);
     res.status(500).json({ error: err.message });
