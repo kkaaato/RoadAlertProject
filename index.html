@@ -977,40 +977,32 @@
                     setLoading('signupBtn', false);
                 }, 1000);
             } else {
-                const supabase = window.supabase;
-                supabase.auth.signUp({ email, password })
-                    .then(async ({ data, error }) => {
-                        if (error) {
-                            showToast(error.message, 'error');
-                            setLoading('signupBtn', false);
-                            return;
-                        }
-                        const userId = data.user.id;
-
-                        // Call serverless function to create profile with admin privileges
-                        try {
-                            const profileRes = await fetch('/api/createProfile', {
-                                method: 'POST',
-                                headers: { 'Content-Type': 'application/json' },
-                                body: JSON.stringify({ userId, username, email })
-                            });
-                            if (!profileRes.ok) {
-                                let bodyText = await profileRes.text();
-                                try { bodyText = JSON.parse(bodyText); } catch(e) {}
-                                console.warn('profile insert error', profileRes.status, bodyText);
-                                showToast('Profile creation failed (server). See console for details.', 'error');
-                            } else {
-                                console.log('profile created successfully');
-                            }
-                        } catch (e) {
-                            console.warn('profile insert fetch error', e.message);
-                            showToast('Profile creation network error', 'error');
-                        }
-
-                        showToast('Signup successful! Please check your email to verify your account.', 'success');
-                        switchTab('login');
-                        setLoading('signupBtn', false);
+                // Use server-side admin create so we avoid email verification requirement
+                try {
+                    const res = await fetch('/api/adminCreateUser', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ username, email, password })
                     });
+                    const txt = await res.text();
+                    let body = null;
+                    try { body = JSON.parse(txt); } catch(e) { body = txt; }
+
+                    if (!res.ok) {
+                        console.warn('admin create user failed', res.status, body);
+                        showToast('Signup failed (server). See console for details.', 'error');
+                        setLoading('signupBtn', false);
+                        return;
+                    }
+
+                    showToast('Account created! You can now sign in.', 'success');
+                    switchTab('login');
+                    setLoading('signupBtn', false);
+                } catch (e) {
+                    console.warn('admin create fetch error', e.message);
+                    showToast('Network error while creating account', 'error');
+                    setLoading('signupBtn', false);
+                }
             }
         }
 
