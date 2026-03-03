@@ -230,8 +230,19 @@
             gap: 12px;
             margin-bottom: 10px;
             font-size: 0.95rem;
+            padding: 8px;
+            border-radius: 10px;
+            transition: all 0.2s;
         }
 
+        .legend-item:hover {
+            background: #f0f0f0;
+            transform: translateX(5px);
+        }
+
+        .legend-item:active {
+            transform: scale(0.98);
+        }
         .legend-icon {
             width: 32px;
             height: 32px;
@@ -717,34 +728,34 @@
         </button>
     </div>
 
-    <!-- Legend -->
-    <div class="legend">
-        <h4><i class="fas fa-info-circle"></i> Legend</h4>
-        <div class="legend-item">
-            <div class="legend-icon" style="background: #2196f3;"><i class="fas fa-water"></i></div>
-            <span>Flooding</span>
-        </div>
-        <div class="legend-item">
-            <div class="legend-icon" style="background: #ff9800;"><i class="fas fa-mountain"></i></div>
-            <span>Rocky Road</span>
-        </div>
-        <div class="legend-item">
-            <div class="legend-icon" style="background: #e91e63;"><i class="fas fa-hard-hat"></i></div>
-            <span>Construction</span>
-        </div>
-        <div class="legend-item">
-            <div class="legend-icon" style="background: #9c27b0;"><i class="fas fa-circle"></i></div>
-            <span>Pothole</span>
-        </div>
-        <div class="legend-item">
-            <div class="legend-icon" style="background: #f44336;"><i class="fas fa-ban"></i></div>
-            <span>Blocked</span>
-        </div>
-        <div class="legend-item">
-            <div class="legend-icon" style="background: #4caf50;"><i class="fas fa-question"></i></div>
-            <span>Other</span>
-        </div>
+<!-- Legend -->
+<div class="legend">
+    <h4><i class="fas fa-info-circle"></i> Quick Report</h4>
+    <div class="legend-item" onclick="quickAddPin('flooding')" style="cursor: pointer;">
+        <div class="legend-icon" style="background: #2196f3;"><i class="fas fa-water"></i></div>
+        <span>Flooding</span>
     </div>
+    <div class="legend-item" onclick="quickAddPin('rocky')" style="cursor: pointer;">
+        <div class="legend-icon" style="background: #ff9800;"><i class="fas fa-mountain"></i></div>
+        <span>Rocky Road</span>
+    </div>
+    <div class="legend-item" onclick="quickAddPin('construction')" style="cursor: pointer;">
+        <div class="legend-icon" style="background: #e91e63;"><i class="fas fa-hard-hat"></i></div>
+        <span>Construction</span>
+    </div>
+    <div class="legend-item" onclick="quickAddPin('pothole')" style="cursor: pointer;">
+        <div class="legend-icon" style="background: #9c27b0;"><i class="fas fa-circle"></i></div>
+        <span>Pothole</span>
+    </div>
+    <div class="legend-item" onclick="quickAddPin('blocked')" style="cursor: pointer;">
+        <div class="legend-icon" style="background: #f44336;"><i class="fas fa-ban"></i></div>
+        <span>Blocked</span>
+    </div>
+    <div class="legend-item" onclick="quickAddPin('other')" style="cursor: pointer;">
+        <div class="legend-icon" style="background: #4caf50;"><i class="fas fa-question"></i></div>
+        <span>Other</span>
+    </div>
+</div>
 
     <!-- Add Pin Modal -->
     <div class="modal-overlay" id="pinModal">
@@ -853,24 +864,6 @@
     <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
 
     <script>
-        // ==================== CONFIGURATION ====================
-        // Firebase configuration was previously here but is unused now.
-        /*
-        const firebaseConfig = {
-            apiKey: "YOUR_API_KEY",
-            authDomain: "YOUR_PROJECT_ID.firebaseapp.com",
-            projectId: "YOUR_PROJECT_ID",
-            storageBucket: "YOUR_PROJECT_ID.appspot.com",
-            messagingSenderId: "YOUR_SENDER_ID",
-            appId: "YOUR_APP_ID"
-        };
-
-        // Initialize Firebase (uncomment when config is added)
-        // firebase.initializeApp(firebaseConfig);
-        // const auth = firebase.auth();
-        // const db = firebase.firestore();
-        */
-
         // ensure Supabase client is ready
         const supabase = window.supabase || null; // injected by index.html on login
         if (!supabase) console.warn('Supabase client not found; authentication will fail');
@@ -982,6 +975,20 @@
             }
             window.location.href = 'index.html';
         }
+        // ==================== QUICK ADD FROM LEGEND ====================
+        function quickAddPin(type) {
+            // Start adding pin mode
+            isAddingPin = true;
+            selectedPinType = type;
+            showToast('Click on the map to place your ' + pinConfigs[type].label + ' report');
+            document.body.style.cursor = 'crosshair';
+    
+        // Pre-select the type in the modal (will be set when modal opens)
+        tempPinType = type;
+        }
+
+        // Store the pre-selected type
+        let tempPinType = null;
         // ==================== MAP FUNCTIONS ====================
         function initMap() {
             // Center on Philippines (Manila)
@@ -1025,6 +1032,15 @@
             document.getElementById('pinModal').style.display = 'flex';
             isAddingPin = false;
             document.body.style.cursor = 'default';
+    
+            // If a type was pre-selected from legend, select it automatically
+            if (tempPinType) {
+                const typeElement = document.querySelector('.pin-type[data-type="' + tempPinType + '"]');
+                if (typeElement) {
+                    selectPinType(typeElement);
+                }
+                tempPinType = null; // Clear it
+            }
         }
 
         function closePinModal() {
