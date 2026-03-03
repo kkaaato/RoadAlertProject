@@ -687,8 +687,10 @@
         </div>
     </div>
 
-    <!-- Supabase public keys injection for local testing (do NOT include service role) -->
-    <!-- fetch keys from Vercel serverless environment endpoint at runtime; falls back to hardcoded values for local dev -->
+    <!-- Supabase Client Library -->
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
+
+    <!-- Load environment variables -->
     <script>
         async function loadSupabaseKeys() {
             try {
@@ -697,29 +699,19 @@
                     const cfg = await res.json();
                     if (cfg.supabaseUrl) window.SUPABASE_URL = cfg.supabaseUrl;
                     if (cfg.supabaseAnonKey) window.SUPABASE_ANON_KEY = cfg.supabaseAnonKey;
+                        console.log('Env loaded in index:', { url: !!cfg.supabaseUrl, key: !!cfg.supabaseAnonKey });
+                } else {
+                    console.error('Failed to load env in index:', res.status);
                 }
             } catch (e) {
                 console.warn('Could not fetch supabase env:', e.message);
             }
-            // fallback values for local testing (replace before deploy if needed)
-            window.SUPABASE_URL = window.SUPABASE_URL || "https://<your-project>.supabase.co";
-            window.SUPABASE_ANON_KEY = window.SUPABASE_ANON_KEY || "<your-anon-key>";
         }
+        loadSupabaseKeys();
     </script>
 
-    <script type="module">
-        import { initSupabase, getSupabase } from './auth.js'
-        (async () => {
-            await loadSupabaseKeys();
-            try {
-                initSupabase()
-                window.supabase = getSupabase()
-                console.log('Supabase initialized in index.html')
-            } catch (err) {
-                console.warn('Supabase not initialized:', err.message)
-            }
-        })();
-    </script>
+    <!-- Initialize Supabase -->
+    <script src="./auth.js"></script>
 
     <!-- Firebase scripts removed; Supabase is used instead -->
 

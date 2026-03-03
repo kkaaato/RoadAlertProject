@@ -14,30 +14,31 @@
     <!-- QR Code Library -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
 
-    <!-- initialize supabase client using same helper -->
-    <script type="module">
-        import { initSupabase, getSupabase } from './auth.js';
-        (async () => {
-            try {
-                // fetch keys from serverless endpoint (Vercel) if available
-                try {
-                    const res = await fetch('/api/env');
-                    if (res.ok) {
-                        const cfg = await res.json();
-                        if (cfg.supabaseUrl) window.SUPABASE_URL = cfg.supabaseUrl;
-                        if (cfg.supabaseAnonKey) window.SUPABASE_ANON_KEY = cfg.supabaseAnonKey;
-                    }
-                } catch (e) {
-                    // ignore; fall back to build-time or hardcoded values
-                }
+    <!-- Supabase Client Library -->
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
 
-                initSupabase();
-                window.supabase = getSupabase();
-            } catch (err) {
-                console.warn('Supabase initialization failed in app.html', err.message);
+    <!-- Load environment variables -->
+    <script>
+        async function loadEnv() {
+            try {
+                const res = await fetch('/api/env');
+                if (res.ok) {
+                    const cfg = await res.json();
+                    if (cfg.supabaseUrl) window.SUPABASE_URL = cfg.supabaseUrl;
+                    if (cfg.supabaseAnonKey) window.SUPABASE_ANON_KEY = cfg.supabaseAnonKey;
+                    console.log('Env loaded:', { url: !!cfg.supabaseUrl, key: !!cfg.supabaseAnonKey });
+                } else {
+                    console.error('Failed to load env:', res.status);
+                }
+            } catch (e) {
+                console.error('Env load error:', e);
             }
-        })();
+        }
+        loadEnv();
     </script>
+
+    <!-- Initialize Supabase -->
+    <script src="./auth.js"></script>
 
     <style>
         * {
