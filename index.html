@@ -795,11 +795,25 @@
             });
         }
 
-        if (document.readyState === 'loading') {
-            document.addEventListener('DOMContentLoaded', attachPasswordToggleHandlers);
-        } else {
-            attachPasswordToggleHandlers();
-        }
+        function onDOMReady(fn) {
+            if (document.readyState === 'loading') {
+                document.addEventListener('DOMContentLoaded', fn);
+            } else {
+                fn();
+            }
+        }       
+
+        onDOMReady(attachPasswordToggleHandlers);
+        onDOMReady(attachConfirmPasswordValidation);
+
+        // Cleanup listeners on page unload
+        window.addEventListener('beforeunload', () => {
+            document.querySelectorAll('i.toggle-password[data-target]').forEach(icon => {
+                const clone = icon.cloneNode(true);
+                icon.parentNode?.replaceChild(clone, icon);
+            });
+        });
+
 
         function validateEmail(email) {
             return /^[^\s@]+@gmail\.com$/.test(email);
@@ -1086,11 +1100,25 @@
             }
         }
 
-        if (document.readyState === 'loading') {
-            document.addEventListener('DOMContentLoaded', attachConfirmPasswordValidation);
-        } else {
-            attachConfirmPasswordValidation();
+        function onDOMReady(fn) {
+            if (document.readyState === 'loading') {
+                document.addEventListener('DOMContentLoaded', fn);
+            } else {
+                fn();
+            }
         }
+
+        onDOMReady(attachPasswordToggleHandlers);
+        onDOMReady(attachConfirmPasswordValidation);
+
+        // Cleanup listeners on page unload
+        window.addEventListener('beforeunload', () => {
+            document.querySelectorAll('i.toggle-password[data-target]').forEach(icon => {
+                const clone = icon.cloneNode(true);
+                icon.parentNode?.replaceChild(clone, icon);
+            });
+        });
+
 
         function submitVerification() {
             verifyCode();

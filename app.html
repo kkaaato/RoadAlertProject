@@ -1077,6 +1077,10 @@
         let currentMapTheme = 'standard';
         let mapLayers = {};
         let demoMode = false; // set true only for offline testing
+        if (demoMode && location.hostname !== 'localhost' && location.hostname !== '127.0.0.1') {
+            console.error('🚨 demoMode is ON in production! Forcing it off.');
+            demoMode = false;
+        }
         let demoPins = [];
         let activeTab = 'all';
         const intervals = [];

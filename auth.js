@@ -13,21 +13,21 @@ async function checkAuth() {
         return;
     }
     
-    // Wait for supabase to be ready
+    // Wait for supabaseClient to be ready  ← CHANGED from window.supabase
     let attempts = 0;
-    while (!window.supabase && attempts < 20) {
+    while (!supabaseClient && attempts < 20) {
         await new Promise(r => setTimeout(r, 100));
         attempts++;
     }
     
-    if (!window.supabase) {
+    if (!supabaseClient) {  // ← CHANGED from window.supabase
         console.error('Supabase not available after waiting');
         document.getElementById('userDisplay').textContent = 'Error';
         return;
     }
     
     try {
-        const { data: { session }, error } = await window.supabase.auth.getSession();
+        const { data: { session }, error } = await supabaseClient.auth.getSession();  // ← CHANGED
         
         if (error) {
             console.error('Session error:', error);
