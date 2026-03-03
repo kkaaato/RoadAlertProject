@@ -976,10 +976,6 @@
     <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
 
     <script>
-        // ensure Supabase client is ready
-        const supabase = window.supabase || null; // injected by index.html on login
-        if (!supabase) console.warn('Supabase client not found; authentication will fail');
-
         // ==================== GLOBAL VARIABLES ====================
         let map;
         let currentUser = null;
