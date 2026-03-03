@@ -1218,31 +1218,33 @@
         }
 
         function savePin(pinData) {
-            if (demoMode) {
-                demoPins.push(pinData);
-                addPinToMap(pinData);
-                updatePinsList();
-                closePinModal();
-                showToast('Report submitted successfully!');
-                updateStats();
-            } else {
-                const supabase = window.supabase;
-                supabase.from('pins').insert(pinData)
-                    .then(({ data, error }) => {
-                        if (error) {
-                            console.error('insert pin error', error.message);
-                            showToast('Failed to submit report', 'error');
-                        } else {
-                            addPinToMap(data[0]);
-                            updatePinsList();
-                            closePinModal();
-                            showToast('Report submitted successfully!');
-                            updateStats();
-                        }
-                    });
+        // Use window.supabase instead of supabase
+            const sb = window.supabase;
+    
+            if (!sb) {
+                console.error('Supabase not initialized');
+                showToast('Database connection failed', 'error');
+            return;
             }
+    
+            sb.from('pins').insert(pinData)
+            .then(({ data, error }) => {
+                if (error) {
+                    console.error('insert pin error', error.message);
+                    showToast('Failed to submit report: ' + error.message, 'error');
+                } else {
+                    addPinToMap(data[0] || pinData);
+                    updatePinsList();
+                    closePinModal();
+                    showToast('Report submitted successfully!');
+                    updateStats();
+                }
+            })
+            .catch(err => {
+                console.error('savePin catch', err);
+                showToast('Failed to submit report', 'error');
+            });
         }
-
         function addPinToMap(pin) {
             const config = pinConfigs[pin.type];
 
