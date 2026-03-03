@@ -1003,16 +1003,19 @@
         }
 
         document.addEventListener('DOMContentLoaded', async function() {
-            await waitForSupabase();
-            checkAuth();
+            // Wait a moment for all scripts to load
+            await new Promise(r => setTimeout(r, 500));
+    
+            await checkAuth();
             initMap();
             loadPins();
+    
             setInterval(updatePinsExpiry, 60000);
             setInterval(() => {
                 document.getElementById('lastUpdate').textContent = 'Just now';
             }, 30000);
         });
-
+        
         async function checkAuth() {
             if (demoMode) {
                 const userData = localStorage.getItem('currentUser');
@@ -1123,34 +1126,46 @@
         let tempPinType = null;
         // ==================== MAP FUNCTIONS ====================
         function initMap() {
-            // Center on Philippines (Manila)
-            map = L.map('map').setView([14.5995, 120.9842], 13);
+            try {
+                // Center on Philippines (Manila)
+                map = L.map('map').setView([14.5995, 120.9842], 13);
 
-            // Add default tile layer
-            mapLayers.standard = L.tileLayer(mapThemes.standard.url, {
-                attribution: mapThemes.standard.attribution,
-                maxZoom: 19
-            }).addTo(map);
+                // Add default tile layer with error handling
+                mapLayers.standard = L.tileLayer(mapThemes.standard.url, {
+                    attribution: mapThemes.standard.attribution,
+                    maxZoom: 19,
+                    crossOrigin: true
+                }).addTo(map);
 
-            // Add other layers
-            mapLayers.satellite = L.tileLayer(mapThemes.satellite.url, {
-                attribution: mapThemes.satellite.attribution,
-                maxZoom: 19
-            });
+                // Add other layers
+                mapLayers.satellite = L.tileLayer(mapThemes.satellite.url, {
+                    attribution: mapThemes.satellite.attribution,
+                    maxZoom: 19
+                });
 
-            mapLayers.dark = L.tileLayer(mapThemes.dark.url, {
-                attribution: mapThemes.dark.attribution,
-                maxZoom: 19
-            });
+                mapLayers.dark = L.tileLayer(mapThemes.dark.url, {
+                    attribution: mapThemes.dark.attribution,
+                    maxZoom: 19
+                });
 
-            // Map click for adding pins
-            map.on('click', function(e) {
-                if (isAddingPin) {
-                    showPinModal(e.latlng);
-                }
-            });
+                // Map click for adding pins
+                map.on('click', function(e) {
+                    if (isAddingPin) {
+                        showPinModal(e.latlng);
+                    }
+                });
 
-            locateUser();
+                console.log('Map initialized successfully');
+        
+                // Try to locate user after map loads
+                setTimeout(locateUser, 1000);
+        
+            } catch (err) {
+                console.error('Map initialization failed:', err);
+                document.getElementById('map').innerHTML = 
+                    '<div style="display:flex;justify-content:center;align-items:center;height:100%;color:#666;">' +
+                    '<p>Failed to load map. Please refresh.</p></div>';
+            }
         }
 
         function startAddingPin() {

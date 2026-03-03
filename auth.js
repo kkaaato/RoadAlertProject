@@ -1,61 +1,57 @@
-// auth.js - Supabase initialization with retry logic
-
-(function() {
-    // Prevent double initialization
-    if (window.authJsInitialized) {
-        console.log('auth.js already initialized, skipping');
+async function checkAuth() {
+    console.log('Checking auth...');
+    
+    if (demoMode) {
+        const userData = localStorage.getItem('currentUser');
+        if (!userData) {
+            window.location.href = 'index.html';
+            return;
+        }
+        currentUser = JSON.parse(userData);
+        document.getElementById('userDisplay').textContent = currentUser.displayName || currentUser.email;
+        console.log('Demo mode user:', currentUser);
         return;
     }
-    window.authJsInitialized = true;
-
-    let initAttempts = 0;
-    const maxAttempts = 10;
-
-    function tryInitSupabase() {
-        initAttempts++;
+    
+    // Wait for supabase to be ready
+    let attempts = 0;
+    while (!window.supabase && attempts < 20) {
+        await new Promise(r => setTimeout(r, 100));
+        attempts++;
+    }
+    
+    if (!window.supabase) {
+        console.error('Supabase not available after waiting');
+        document.getElementById('userDisplay').textContent = 'Error';
+        return;
+    }
+    
+    try {
+        const { data: { session }, error } = await window.supabase.auth.getSession();
         
-        // Check if Supabase library is loaded
-        if (typeof window.supabase === 'undefined' || !window.supabase.createClient) {
-            if (initAttempts < maxAttempts) {
-                console.log(`Waiting for Supabase library... attempt ${initAttempts}`);
-                setTimeout(tryInitSupabase, 200);
-                return;
-            }
-            console.error('Supabase library failed to load');
+        if (error) {
+            console.error('Session error:', error);
+            window.location.href = 'index.html';
             return;
         }
-
-        // Check if env vars are loaded
-        const url = window.SUPABASE_URL;
-        const key = window.SUPABASE_ANON_KEY;
-
-        if (!url || !key) {
-            if (initAttempts < maxAttempts) {
-                console.log(`Waiting for env vars... attempt ${initAttempts}`);
-                setTimeout(tryInitSupabase, 200);
-                return;
-            }
-            console.error('Supabase env vars not found after retries');
-            // Use fallback for testing (replace with your actual values)
-            console.warn('Add fallback values or check /api/env endpoint');
+        
+        if (!session || !session.user) {
+            console.log('No session, redirecting to login');
+            window.location.href = 'index.html';
             return;
         }
-
-        // Initialize client
-        try {
-            const client = window.supabase.createClient(url, key);
-            window.supabaseClient = client;
-            window.supabase = client; // For backward compatibility
-            console.log('Supabase initialized successfully');
-        } catch (err) {
-            console.error('Failed to create Supabase client:', err);
-        }
+        
+        currentUser = {
+            uid: session.user.id,
+            email: session.user.email,
+            displayName: session.user.user_metadata?.username || session.user.email
+        };
+        
+        document.getElementById('userDisplay').textContent = currentUser.displayName;
+        console.log('Auth success:', currentUser);
+        
+    } catch (err) {
+        console.error('checkAuth error:', err);
+        document.getElementById('userDisplay').textContent = 'Error';
     }
-
-    // Start initialization
-    if (document.readyState === 'loading') {
-        document.addEventListener('DOMContentLoaded', tryInitSupabase);
-    } else {
-        tryInitSupabase();
-    }
-})();
+}
