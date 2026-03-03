@@ -34,7 +34,7 @@ module.exports = async (req, res) => {
         email,
         password,
         email_confirm: true,
-        user_metadata: { username }
+        user_metadata: { username, full_name: username }
       })
     });
 
