@@ -691,33 +691,33 @@
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
 
     <script>
-        // Initialize Supabase after library loads
-        let supabaseInitialized = false;
-        
-        async function initSupabase() {
-            if (supabaseInitialized) return;
-            
-            try {
-                const res = await fetch('/api/env');
-                const cfg = await res.json();
-                if (cfg.supabaseUrl && cfg.supabaseAnonKey) {
-                    window.supabase = window.supabase.createClient(cfg.supabaseUrl, cfg.supabaseAnonKey);
-                    supabaseInitialized = true;
-                    console.log('Supabase initialized successfully');
-                } else {
-                    console.error('Missing Supabase config');
-                }
-            } catch (e) {
-                console.error('Supabase init error:', e);
+    (async function initSupabaseSafe(){
+        // Don't override existing globals or redeclare identifiers
+        if (window.supabaseClient) return;
+
+        if (!window.supabase || typeof window.supabase.createClient !== 'function') {
+            console.warn('Supabase UMD not found. Ensure the <script> src for supabase is loaded.');
+            return;
+        }
+
+        try {
+            const res = await fetch('/api/env').catch(() => null);
+            const cfg = res ? await res.json() : {};
+            const url = cfg.supabaseUrl || cfg.SUPABASE_URL || '';
+            const key = cfg.supabaseAnonKey || cfg.SUPABASE_ANON_KEY || '';
+
+            if (!url || !key) {
+                console.warn('Supabase config missing; skipping client creation.');
+                return;
             }
+
+            // Create client and store it on window under a new name to avoid collisions
+            window.supabaseClient = window.supabase.createClient(url, key);
+            console.log('supabaseClient initialized');
+        } catch (err) {
+            console.error('Supabase init error:', err);
         }
-        
-        // Wait for DOM and library to load
-        if (document.readyState === 'loading') {
-            document.addEventListener('DOMContentLoaded', initSupabase);
-        } else {
-            initSupabase();
-        }
+    })();
     </script>
 
     <script>
