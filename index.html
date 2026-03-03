@@ -687,27 +687,38 @@
         </div>
     </div>
 
-    <!-- Supabase Client Library -->
+        <!-- Supabase Client Library -->
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
 
     <script>
-        // Initialize Supabase immediately
-        (async function initSupabase() {
+        // Initialize Supabase after library loads
+        let supabaseInitialized = false;
+        
+        async function initSupabase() {
+            if (supabaseInitialized) return;
+            
             try {
                 const res = await fetch('/api/env');
                 const cfg = await res.json();
                 if (cfg.supabaseUrl && cfg.supabaseAnonKey) {
                     window.supabase = window.supabase.createClient(cfg.supabaseUrl, cfg.supabaseAnonKey);
-                    console.log('Supabase initialized');
+                    supabaseInitialized = true;
+                    console.log('Supabase initialized successfully');
                 } else {
                     console.error('Missing Supabase config');
                 }
             } catch (e) {
                 console.error('Supabase init error:', e);
             }
-        })();
+        }
+        
+        // Wait for DOM and library to load
+        if (document.readyState === 'loading') {
+            document.addEventListener('DOMContentLoaded', initSupabase);
+        } else {
+            initSupabase();
+        }
     </script>
-    <!-- Firebase scripts removed; Supabase is used instead -->
 
     <script>
         // ==================== CONFIGURATION ====================
