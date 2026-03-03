@@ -1883,11 +1883,6 @@
                         console.log('✅ Successfully subscribed to realtime updates!');
                     }
                 });
-        
-            // Also set up a periodic refresh as backup (every 10 seconds)
-            setInterval(() => {
-                refreshPinsFromServer();
-            }, 10000);
         }
 
         function handleRealtimeUpdate(payload) {
