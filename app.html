@@ -403,6 +403,10 @@
             align-items: center;
             backdrop-filter: blur(5px);
         }
+        /* When modal is shown, use flex to center */
+        .modal-overlay[style*="flex"] {
+            display: flex !important;
+        }
 
         .modal {
             background: white;
