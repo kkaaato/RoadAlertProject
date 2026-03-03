@@ -1,0 +1,227 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Privacy Policy — RoadAlert</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: #f0f2f5;
+            color: #333;
+            line-height: 1.7;
+        }
+
+        header {
+            background: linear-gradient(135deg, #0f0c29 0%, #302b63 50%, #24243e 100%);
+            color: white;
+            padding: 18px 30px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            position: sticky;
+            top: 0;
+            z-index: 100;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.2);
+        }
+
+        .logo {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            font-size: 1.4rem;
+            font-weight: bold;
+            text-decoration: none;
+            color: white;
+        }
+
+        .back-btn {
+            background: rgba(255,255,255,0.15);
+            color: white;
+            border: none;
+            padding: 9px 18px;
+            border-radius: 20px;
+            cursor: pointer;
+            font-size: 0.9rem;
+            font-weight: 600;
+            display: flex;
+            align-items: center;
+            gap: 7px;
+            text-decoration: none;
+            transition: background 0.2s;
+        }
+
+        .back-btn:hover { background: rgba(255,255,255,0.25); }
+
+        .container {
+            max-width: 780px;
+            margin: 40px auto;
+            padding: 0 20px 60px;
+        }
+
+        .page-title {
+            text-align: center;
+            margin-bottom: 36px;
+        }
+
+        .page-title h1 {
+            font-size: 2.2rem;
+            color: #0f0c29;
+            margin-bottom: 8px;
+        }
+
+        .page-title p {
+            color: #888;
+            font-size: 0.95rem;
+        }
+
+        .card {
+            background: white;
+            border-radius: 16px;
+            padding: 32px;
+            margin-bottom: 20px;
+            box-shadow: 0 2px 12px rgba(0,0,0,0.06);
+        }
+
+        .card h2 {
+            font-size: 1.2rem;
+            color: #302b63;
+            margin-bottom: 14px;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            padding-bottom: 10px;
+            border-bottom: 2px solid #f0f2f5;
+        }
+
+        .card h2 i {
+            color: #00f260;
+            font-size: 1.1rem;
+        }
+
+        .card p { margin-bottom: 12px; color: #555; font-size: 0.97rem; }
+        .card p:last-child { margin-bottom: 0; }
+
+        .card ul {
+            padding-left: 20px;
+            color: #555;
+            font-size: 0.97rem;
+        }
+
+        .card ul li { margin-bottom: 8px; }
+
+        .highlight {
+            background: #f0fff4;
+            border-left: 4px solid #00f260;
+            padding: 14px 18px;
+            border-radius: 0 10px 10px 0;
+            margin: 14px 0;
+            color: #2e7d32;
+            font-size: 0.95rem;
+        }
+
+        .footer-note {
+            text-align: center;
+            color: #aaa;
+            font-size: 0.85rem;
+            margin-top: 30px;
+        }
+
+        @media (max-width: 600px) {
+            .container { margin: 20px auto; }
+            .card { padding: 22px 16px; }
+            .page-title h1 { font-size: 1.7rem; }
+        }
+    </style>
+</head>
+<body>
+
+<header>
+    <a href="index.html" class="logo">
+        <i class="fas fa-map-marked-alt"></i> RoadAlert
+    </a>
+    <a href="index.html" class="back-btn">
+        <i class="fas fa-arrow-left"></i> Back
+    </a>
+</header>
+
+<div class="container">
+    <div class="page-title">
+        <h1><i class="fas fa-shield-alt" style="color:#00f260;"></i> Privacy Policy</h1>
+        <p>Last updated: March 2026 &nbsp;·&nbsp; Effective immediately</p>
+    </div>
+
+    <div class="card">
+        <h2><i class="fas fa-info-circle"></i> Overview</h2>
+        <p>RoadAlert ("we", "our", or "us") is a community-powered road monitoring platform serving the Philippines. This Privacy Policy explains what information we collect, how we use it, and your rights regarding your data.</p>
+        <p>By using RoadAlert, you agree to the practices described in this policy.</p>
+    </div>
+
+    <div class="card">
+        <h2><i class="fas fa-database"></i> What Data We Collect</h2>
+        <p>We collect only the minimum data necessary to provide our service:</p>
+        <ul>
+            <li><strong>Account information</strong> — your Gmail address and chosen username when you register.</li>
+            <li><strong>Location data</strong> — your approximate GPS coordinates, used only when you choose to place a road report or find your location on the map. We do not track your location in the background.</li>
+            <li><strong>Road reports</strong> — the type, description, coordinates, and timestamp of any report you submit.</li>
+            <li><strong>Votes</strong> — records of which reports you have upvoted or downvoted, linked to your account ID.</li>
+            <li><strong>Device information</strong> — basic browser/device type collected automatically for error logging purposes only.</li>
+        </ul>
+        <div class="highlight">
+            We do not collect your full name, phone number, payment details, or any sensitive personal information.
+        </div>
+    </div>
+
+    <div class="card">
+        <h2><i class="fas fa-server"></i> How Data Is Stored</h2>
+        <p>All user data is stored securely using <strong>Supabase</strong>, a cloud database platform that is SOC 2 compliant and uses industry-standard encryption (TLS in transit, AES-256 at rest).</p>
+        <p>Your data is stored on servers that may be located outside the Philippines. By using RoadAlert, you consent to this transfer.</p>
+        <p>Road reports are automatically deleted when they expire based on the duration you selected when submitting them.</p>
+    </div>
+
+    <div class="card">
+        <h2><i class="fas fa-puzzle-piece"></i> Third-Party Services</h2>
+        <p>RoadAlert uses the following third-party services to function:</p>
+        <ul>
+            <li><strong>Supabase</strong> — database and authentication. <a href="https://supabase.com/privacy" target="_blank">Privacy Policy</a></li>
+            <li><strong>Leaflet.js</strong> — open-source map rendering library. No personal data is sent to Leaflet.</li>
+            <li><strong>OpenStreetMap</strong> — map tile provider. Tile requests may include your IP address. <a href="https://wiki.osmfoundation.org/wiki/Privacy_Policy" target="_blank">Privacy Policy</a></li>
+            <li><strong>Esri / ArcGIS</strong> — satellite map tiles (optional view). <a href="https://www.esri.com/en-us/privacy/overview" target="_blank">Privacy Policy</a></li>
+            <li><strong>CARTO</strong> — dark mode map tiles (optional view). <a href="https://carto.com/privacy/" target="_blank">Privacy Policy</a></li>
+            <li><strong>Font Awesome & cdnjs</strong> — icon fonts loaded from CDN. No personal data collected.</li>
+        </ul>
+        <p>We do not sell your data to any third party, and none of these services receive your email address.</p>
+    </div>
+
+    <div class="card">
+        <h2><i class="fas fa-user-shield"></i> Your Rights</h2>
+        <p>You have the following rights regarding your data:</p>
+        <ul>
+            <li><strong>Access</strong> — you can view all reports you have submitted in the "My Reports" tab.</li>
+            <li><strong>Delete reports</strong> — you can delete any of your own road reports at any time directly from the map.</li>
+            <li><strong>Delete your account</strong> — to permanently delete your account and all associated data, contact us at the email below. We will process your request within 14 days.</li>
+            <li><strong>Data portability</strong> — you may request a copy of your stored data by contacting us.</li>
+        </ul>
+        <div class="highlight">
+            To exercise any of these rights, email us at: <strong>support@roadalert.app</strong>
+        </div>
+    </div>
+
+    <div class="card">
+        <h2><i class="fas fa-cookie-bite"></i> Cookies & Local Storage</h2>
+        <p>RoadAlert does not use tracking cookies. We use your browser's <strong>local storage</strong> solely to keep you logged in between sessions. No advertising or analytics cookies are used.</p>
+    </div>
+
+    <div class="card">
+        <h2><i class="fas fa-edit"></i> Changes to This Policy</h2>
+        <p>We may update this Privacy Policy from time to time. When we do, we will update the "Last updated" date at the top. Continued use of RoadAlert after changes constitutes your acceptance of the updated policy.</p>
+    </div>
+
+    <p class="footer-note">© 2026 RoadAlert. All rights reserved.</p>
+</div>
+
+</body>
+</html>
