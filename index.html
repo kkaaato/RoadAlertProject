@@ -1294,8 +1294,8 @@
                 }, 1500);
             } else {
                     supabaseClient.auth.resetPasswordForEmail(email, {
-            redirectTo: window.location.origin + '/index.html'
-        })
+            redirectTo: window.location.origin + '/reset-password.html'
+                })
                     .then(({ data, error }) => {
                         if (error) {
                             showError('forgotEmail', true);
