@@ -1081,11 +1081,21 @@
             loadPins();
     
             setInterval(updatePinsExpiry, 60000);
-            setInterval(() => {
+                        setInterval(() => {
                 document.getElementById('lastUpdate').textContent = 'Just now';
             }, 30000);
+
+            // Start live countdown updater
+            setInterval(() => {
+                document.querySelectorAll('.countdown').forEach(el => {
+                    const expires = el.dataset.expires;
+                    if (expires) {
+                        el.textContent = formatCountdown(expires);
+                    }
+                });
+            }, 60000); // Update every minute
         });
-        
+
         async function checkAuth() {
         // Wait for Supabase to be ready
         let attempts = 0;
@@ -1386,7 +1396,7 @@
                 <p style="margin: 10px 0; color: #333;">${pin.description || 'No description'}</p>
                 <div style="font-size: 0.9rem; color: #666; margin-bottom: 10px;">
                     <i class="fas fa-user"></i> <strong>${pin.created_by_name || pin.createdByName || 'Unknown'}</strong> ${isOwner ? '<span style="color: #00f260;">(You)</span>' : ''}<br>
-                    <i class="fas fa-clock"></i> Expires in ${expiresIn} days
+                    <i class="fas fa-clock"></i> <span class="countdown" data-expires="${pin.expires_at || pin.expiresAt}">${formatCountdown(pin.expires_at || pin.expiresAt)}</span>
                 </div>
             `;
 
@@ -1603,7 +1613,7 @@
 
             container.innerHTML = filteredPins.map(pin => {
                 const config = pinConfigs[pin.type];
-                const expiresIn = Math.ceil((new Date(pin.expiresAt) - new Date()) / (1000 * 60 * 60 * 24));
+                const expiresAt = pin.expires_at || pin.expiresAt;
                 const isOwner = currentUser && (pin.created_by === currentUser.uid);
 
                 return `
@@ -1612,7 +1622,7 @@
                             <span class="pin-type-badge ${pin.type}">
                                 <i class="fas ${config.icon}"></i> ${config.label}
                             </span>
-                            <small style="color: #666;">${expiresIn}d left</small>
+                            <small style="color: #666;" class="countdown" data-expires="${pin.expires_at || pin.expiresAt}">${formatCountdown(pin.expires_at || pin.expiresAt)}</small>
                         </div>
                         <p class="pin-description">${pin.description || 'No description'}</p>
                         <div class="pin-meta">
@@ -1626,6 +1636,22 @@
                     </div>
                 `;
         }).join('');
+        }
+        
+        function formatCountdown(expiresAt) {
+            const now = new Date();
+            const expiry = new Date(expiresAt);
+            const diff = expiry - now;
+            
+            if (diff <= 0) return 'Expired';
+            
+            const days = Math.floor(diff / (1000 * 60 * 60 * 24));
+            const hours = Math.floor((diff % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60));
+            const minutes = Math.floor((diff % (1000 * 60 * 60)) / (1000 * 60));
+            
+            if (days > 0) return `${days}d ${hours}h left`;
+            if (hours > 0) return `${hours}h ${minutes}m left`;
+            return `${minutes}m left`;
         }
 
         function focusPin(pinId) {
