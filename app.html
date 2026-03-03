@@ -1473,90 +1473,85 @@
             content += '</div>';
             return content;
         }
-            async function votePin(pinId, voteType) {
-                const pin = pinsData[pinId];
-                if (!pin) return;             
+        async function votePin(pinId, voteType) {
+            const pin = pinsData[pinId];
+            if (!pin) return;
 
-                const previousVote = pin.voters ? pin.voters[currentUser.uid] : null;
-                const HOURS_TO_MS = 60 * 60 * 1000;
-                const TIME_ADJUSTMENT = 2 * HOURS_TO_MS;
+            const previousVote = pin.voters ? pin.voters[currentUser.uid] : null;
+            const HOURS_TO_MS = 60 * 60 * 1000;
+            const TIME_ADJUSTMENT = 2 * HOURS_TO_MS;
 
-                // After adjusting time in votePin()
-                const timeElement = document.querySelector(`[data-pin-id="${pinId}"] .countdown`);
-                if (timeElement) {
-                    timeElement.classList.add(voteType === 'up' ? 'time-adjusted' : 'time-reduced');
-                    setTimeout(() => {
-                    timeElement.classList.remove('time-adjusted', 'time-reduced');
-                    }, 1000);
+            // Remove previous vote effect
+            if (previousVote === 'up') {
+                pin.upvotes = (pin.upvotes || 0) - 1;
+                pin.expires_at = new Date(new Date(pin.expires_at).getTime() - TIME_ADJUSTMENT).toISOString();
+            }
+            if (previousVote === 'down') {
+                pin.downvotes = (pin.downvotes || 0) - 1;
+                pin.expires_at = new Date(new Date(pin.expires_at).getTime() + TIME_ADJUSTMENT).toISOString();
+            }
+
+            // Apply new vote
+            if (previousVote === voteType) {
+                delete pin.voters[currentUser.uid];
+            } else {
+                if (!pin.voters) pin.voters = {};
+                pin.voters[currentUser.uid] = voteType;
+                if (voteType === 'up') {
+                    pin.upvotes = (pin.upvotes || 0) + 1;
+                    pin.expires_at = new Date(new Date(pin.expires_at).getTime() + TIME_ADJUSTMENT).toISOString();
+                showToast('You confirmed this report! +2 hours added');
+                } else {
+                    pin.downvotes = (pin.downvotes || 0) + 1;
+                    pin.expires_at = new Date(new Date(pin.expires_at).getTime() - TIME_ADJUSTMENT).toISOString();
+                    showToast('You disputed this report! -2 hours removed');
                 }
+            }
 
-    // Remove previous vote effect
-    if (previousVote === 'up') {
-        pin.upvotes = (pin.upvotes || 0) - 1;
-        pin.expires_at = new Date(new Date(pin.expires_at).getTime() - TIME_ADJUSTMENT).toISOString();
-    }
-    if (previousVote === 'down') {
-        pin.downvotes = (pin.downvotes || 0) - 1;
-        pin.expires_at = new Date(new Date(pin.expires_at).getTime() + TIME_ADJUSTMENT).toISOString();
-    }
+            // Check if pin should be removed
+            if (pin.downvotes > pin.upvotes && pin.downvotes >= 3) {
+                await removePin(pinId, 'disapproved');
+                showToast('Report removed due to community disapproval');
+                return;
+            }
 
-    // Apply new vote
-    if (previousVote === voteType) {
-        // Toggle off - remove vote completely
-        delete pin.voters[currentUser.uid];
-    } else {
-        // Add new vote with time adjustment
-        if (!pin.voters) pin.voters = {};
-        pin.voters[currentUser.uid] = voteType;
-        if (voteType === 'up') {
-            pin.upvotes = (pin.upvotes || 0) + 1;
-            pin.expires_at = new Date(new Date(pin.expires_at).getTime() + TIME_ADJUSTMENT).toISOString();
-            showToast('You confirmed this report! +2 hours added');
-        } else {
-            pin.downvotes = (pin.downvotes || 0) + 1;
-            pin.expires_at = new Date(new Date(pin.expires_at).getTime() - TIME_ADJUSTMENT).toISOString();
-            showToast('You disputed this report! -2 hours removed');
+            // Update UI immediately (optimistic update)
+            pinsData[pinId] = pin;
+            if (markers[pinId]) {
+                markers[pinId].setPopupContent(createPopupContent(pin));
+            }
+            updatePinsList();
+
+            // Save to Supabase
+            try {
+                const { error } = await supabaseClient
+                    .from('pins')
+                    .update({ 
+                        upvotes: pin.upvotes,
+                        downvotes: pin.downvotes,
+                        voters: pin.voters,
+                        expires_at: pin.expires_at
+                    })
+                    .eq('id', pinId);
+
+                if (error) {
+                    console.error('Failed to save vote:', error);
+                    showToast('Failed to save vote', 'error');
+                    // Revert UI on error
+                    await refreshPinsFromServer();
+                }
+            } catch (err) {
+                console.error('Vote save error:', err);
+                showToast('Failed to save vote', 'error');
+                await refreshPinsFromServer();
+
+                if (error) {
+                    console.error('Failed to save vote:', error);
+                    showToast('Failed to save vote', 'error');
+                    return;
+                }
+            }
         }
-    }
-
-    // Check if pin should be removed
-    if (pin.downvotes > pin.upvotes && pin.downvotes >= 3) {
-        await removePin(pinId, 'disapproved');
-        showToast('Report removed due to community disapproval');
-        return;
-    }
-
-    // SAVE TO SUPABASE - THIS IS THE NEW PART
-    try {
-        const { error } = await supabaseClient
-            .from('pins')
-            .update({ 
-                upvotes: pin.upvotes,
-                downvotes: pin.downvotes,
-                voters: pin.voters,
-                expires_at: pin.expires_at,
-                status: pin.status
-            })
-            .eq('id', pinId);
-
-        if (error) {
-            console.error('Failed to save vote:', error);
-            showToast('Failed to save vote', 'error');
-            return;
-        }
-
-        // Update local data and UI
-        pinsData[pinId] = pin;
-        if (markers[pinId]) {
-            markers[pinId].setPopupContent(createPopupContent(pin));
-        }
-        updatePinsList();
-        
-    } catch (err) {
-        console.error('Vote save error:', err);
-        showToast('Failed to save vote', 'error');
-    }
-}
 
         async function deletePin(pinId) {
         if (confirm('Are you sure you want to remove this report?')) {
@@ -1690,59 +1685,140 @@
             updatePinsList();
             updateStats();
         }
-        
+
         function subscribeToPinUpdates() {
             if (!supabaseClient) {
                 console.log('Supabase not ready for realtime');
                 return;
             }
-            
+    
             console.log('Setting up realtime subscriptions...');
-            
-            supabaseClient
+    
+            // Remove existing channel if any
+            supabaseClient.removeChannel('pins-channel');
+    
+            const channel = supabaseClient
                 .channel('pins-channel')
                 .on('postgres_changes', 
-                    { event: '*', schema: 'public', table: 'pins' },
+                    { 
+                        event: '*', 
+                        schema: 'public', 
+                        table: 'pins',
+                        filter: 'status=eq.active'  // Only listen to active pins
+                    },
                     (payload) => {
-                        console.log('Realtime update:', payload);
-                        
-                        if (payload.eventType === 'INSERT') {
-                            const newPin = payload.new;
-                            if (!pinsData[newPin.id]) {
-                                addPinToMap(newPin);
-                                pinsData[newPin.id] = newPin;
-                                updateStats();
-                                updatePinsList();
-                                showToast('New report added!', 'info');
-                            }
-                        }
-                        else if (payload.eventType === 'UPDATE') {
-                            const updatedPin = payload.new;
-                            pinsData[updatedPin.id] = updatedPin;
-                            if (markers[updatedPin.id]) {
-                                markers[updatedPin.id].setPopupContent(createPopupContent(updatedPin));
-                            }
-                            updatePinsList();
-                        }
-                        else if (payload.eventType === 'DELETE') {
-                            const deletedPin = payload.old;
-                            if (pinsData[deletedPin.id]) {
-                                if (markers[deletedPin.id]) {
-                                    map.removeLayer(markers[deletedPin.id]);
-                                    delete markers[deletedPin.id];
-                                }
-                                delete pinsData[deletedPin.id];
-                                updateStats();
-                                updatePinsList();
-                                showToast('A report was removed', 'info');
-                            }
-                        }
+                        console.log('Realtime update received:', payload);
+                        handleRealtimeUpdate(payload);
                     }
                 )
-                .subscribe((status) => {
-                    console.log('Realtime subscription status:', status);
+                .subscribe((status, err) => {
+                    console.log('Realtime status:', status);
+                    if (err) {
+                        console.error('Realtime subscription error:', err);
+                    }
+                    if (status === 'SUBSCRIBED') {
+                        console.log('✅ Successfully subscribed to realtime updates!');
+                    }
                 });
+        
+            // Also set up a periodic refresh as backup (every 10 seconds)
+            setInterval(() => {
+                refreshPinsFromServer();
+            }, 10000);
         }
+
+        function handleRealtimeUpdate(payload) {
+            console.log('Handling update:', payload.eventType, payload);
+    
+            switch(payload.eventType) {
+                case 'INSERT':
+                    const newPin = payload.new;
+                    if (!pinsData[newPin.id]) {
+                        console.log('Adding new pin:', newPin.id);
+                        addPinToMap(newPin);
+                        pinsData[newPin.id] = newPin;
+                        updateStats();
+                        updatePinsList();
+                        showToast('New report added!', 'info');
+                    }
+                    break;
+            
+                case 'UPDATE':
+                 const updatedPin = payload.new;
+                    console.log('Updating pin:', updatedPin.id);
+                    pinsData[updatedPin.id] = updatedPin;
+                    if (markers[updatedPin.id]) {
+                        markers[updatedPin.id].setPopupContent(createPopupContent(updatedPin));
+                    }
+                    updatePinsList();
+                    break;
+            
+                case 'DELETE':
+                    const deletedPin = payload.old;
+                    console.log('Deleting pin:', deletedPin.id);
+                    if (pinsData[deletedPin.id]) {
+                        if (markers[deletedPin.id]) {
+                            map.removeLayer(markers[deletedPin.id]);
+                            delete markers[deletedPin.id];
+                        }
+                        delete pinsData[deletedPin.id];
+                        updateStats();
+                        updatePinsList();
+                    }
+                    break;
+            }
+        }
+
+        // Backup function to refresh from server periodically
+        async function refreshPinsFromServer() {
+            if (!supabaseClient) return;
+    
+            try {
+                const { data, error } = await supabaseClient
+                    .from('pins')
+                    .select('*')
+                    .eq('status', 'active');
+            
+                if (error) {
+                    console.error('Refresh error:', error);
+                    return;
+                }
+        
+                // Check for new or updated pins
+                data.forEach(pin => {
+                    const existingPin = pinsData[pin.id];
+                    if (!existingPin) {
+                        // New pin
+                       addPinToMap(pin);
+                       pinsData[pin.id] = pin;
+                    } else if (JSON.stringify(existingPin) !== JSON.stringify(pin)) {
+                        // Updated pin
+                        pinsData[pin.id] = pin;
+                        if (markers[pin.id]) {
+                            markers[pin.id].setPopupContent(createPopupContent(pin));
+                        }
+                    }
+                });
+        
+        // Check for deleted pins
+        const serverIds = new Set(data.map(p => p.id));
+        Object.keys(pinsData).forEach(id => {
+            if (!serverIds.has(id)) {
+                if (markers[id]) {
+                    map.removeLayer(markers[id]);
+                    delete markers[id];
+                }
+                delete pinsData[id];
+            }
+        });
+        
+        updateStats();
+        updatePinsList();
+        
+    } catch (err) {
+        console.error('Refresh failed:', err);
+    }
+}
 
         function updatePinsExpiry() {
             const now = new Date();
