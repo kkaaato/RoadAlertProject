@@ -1462,76 +1462,122 @@
             return content;
         }
 
-                function votePin(pinId, voteType) {
-            const pin = pinsData[pinId];
-            if (!pin) return;
+            async function votePin(pinId, voteType) {
+    const pin = pinsData[pinId];
+    if (!pin) return;
 
-            const previousVote = pin.voters[currentUser.uid];
-            const HOURS_TO_MS = 60 * 60 * 1000; // 2 hours in milliseconds
-            const TIME_ADJUSTMENT = 2 * HOURS_TO_MS; // +2 or -2 hours
+    const previousVote = pin.voters ? pin.voters[currentUser.uid] : null;
+    const HOURS_TO_MS = 60 * 60 * 1000;
+    const TIME_ADJUSTMENT = 2 * HOURS_TO_MS;
 
-            // Remove previous vote effect
-            if (previousVote === 'up') {
-                pin.upvotes--;
-                // Remove the +2 hours we previously added
-                pin.expires_at = new Date(new Date(pin.expires_at) - TIME_ADJUSTMENT).toISOString();
-            }
-            if (previousVote === 'down') {
-                pin.downvotes--;
-                // Remove the -2 hours we previously subtracted
-                pin.expires_at = new Date(new Date(pin.expires_at) + TIME_ADJUSTMENT).toISOString();
-            }
+    // Remove previous vote effect
+    if (previousVote === 'up') {
+        pin.upvotes = (pin.upvotes || 0) - 1;
+        pin.expires_at = new Date(new Date(pin.expires_at).getTime() - TIME_ADJUSTMENT).toISOString();
+    }
+    if (previousVote === 'down') {
+        pin.downvotes = (pin.downvotes || 0) - 1;
+        pin.expires_at = new Date(new Date(pin.expires_at).getTime() + TIME_ADJUSTMENT).toISOString();
+    }
 
-            // Apply new vote
-            if (previousVote === voteType) {
-                // Toggle off - remove vote completely
-                delete pin.voters[currentUser.uid];
-            } else {
-                // Add new vote with time adjustment
-                pin.voters[currentUser.uid] = voteType;
-                if (voteType === 'up') {
-                    pin.upvotes++;
-                    // Add +2 hours to pin lifetime
-                    pin.expires_at = new Date(new Date(pin.expires_at) + TIME_ADJUSTMENT).toISOString();
-                    showToast('You confirmed this report! +2 hours added');
-                } else {
-                    pin.downvotes++;
-                    // Subtract -2 hours from pin lifetime
-                    pin.expires_at = new Date(new Date(pin.expires_at) - TIME_ADJUSTMENT).toISOString();
-                    showToast('You disputed this report! -2 hours removed');
-                }
-            }
+    // Apply new vote
+    if (previousVote === voteType) {
+        // Toggle off - remove vote completely
+        delete pin.voters[currentUser.uid];
+    } else {
+        // Add new vote with time adjustment
+        if (!pin.voters) pin.voters = {};
+        pin.voters[currentUser.uid] = voteType;
+        if (voteType === 'up') {
+            pin.upvotes = (pin.upvotes || 0) + 1;
+            pin.expires_at = new Date(new Date(pin.expires_at).getTime() + TIME_ADJUSTMENT).toISOString();
+            showToast('You confirmed this report! +2 hours added');
+        } else {
+            pin.downvotes = (pin.downvotes || 0) + 1;
+            pin.expires_at = new Date(new Date(pin.expires_at).getTime() - TIME_ADJUSTMENT).toISOString();
+            showToast('You disputed this report! -2 hours removed');
+        }
+    }
 
-            // Check if pin should be removed (more downvotes than upvotes and at least 3 downvotes)
-            if (pin.downvotes > pin.upvotes && pin.downvotes >= 3) {
-                removePin(pinId, 'disapproved');
-                showToast('Report removed due to community disapproval');
-            } else {
-                updatePin(pin);
-                // Refresh popup to show new time
-                if (markers[pinId]) {
-                    markers[pinId].setPopupContent(createPopupContent(pin));
-                }
-            }
+    // Check if pin should be removed
+    if (pin.downvotes > pin.upvotes && pin.downvotes >= 3) {
+        await removePin(pinId, 'disapproved');
+        showToast('Report removed due to community disapproval');
+        return;
+    }
+
+    // SAVE TO SUPABASE - THIS IS THE NEW PART
+    try {
+        const { error } = await supabaseClient
+            .from('pins')
+            .update({ 
+                upvotes: pin.upvotes,
+                downvotes: pin.downvotes,
+                voters: pin.voters,
+                expires_at: pin.expires_at,
+                status: pin.status
+            })
+            .eq('id', pinId);
+
+        if (error) {
+            console.error('Failed to save vote:', error);
+            showToast('Failed to save vote', 'error');
+            return;
         }
 
-        function deletePin(pinId) {
+        // Update local data and UI
+        pinsData[pinId] = pin;
+        if (markers[pinId]) {
+            markers[pinId].setPopupContent(createPopupContent(pin));
+        }
+        updatePinsList();
+        
+    } catch (err) {
+        console.error('Vote save error:', err);
+        showToast('Failed to save vote', 'error');
+    }
+}
+        async function votePin(pinId, voteType) {
+            // ... (the new async version with Supabase save) ...
+        }
+
+        async function deletePin(pinId) {
             if (confirm('Are you sure you want to remove this report?')) {
-                removePin(pinId, 'deleted');
-                showToast('Report removed successfully');
+                await removePin(pinId, 'deleted');
             }
         }
 
-        function removePin(pinId, reason) {
-            demoPins = demoPins.filter(p => p.id !== pinId);
-            if (markers[pinId]) {
-                map.removeLayer(markers[pinId]);
-                delete markers[pinId];
-                delete pinsData[pinId];
-            }
-            updatePinsList();
-            updateStats();
+        async function removePin(pinId, reason) {
+            // ... (the Supabase delete version) ...
         }
+            
+        async function deletePin(pinId) {
+    if (confirm('Are you sure you want to remove this report?')) {
+        await removePin(pinId, 'deleted');
+    }
+}
+
+        async function removePin(pinId, reason) {
+    // Delete from Supabase
+    try {
+        await supabaseClient
+            .from('pins')
+            .delete()
+            .eq('id', pinId);
+    } catch (e) {
+        console.error('Failed to delete pin:', e);
+    }
+
+    // Remove from local map
+    if (markers[pinId]) {
+        map.removeLayer(markers[pinId]);
+        delete markers[pinId];
+    }
+    delete pinsData[pinId];
+    
+    updatePinsList();
+    updateStats();
+}
 
         function updatePin(pin) {
             const index = demoPins.findIndex(p => p.id === pin.id);
