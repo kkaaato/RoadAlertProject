@@ -690,46 +690,28 @@
     <!-- Supabase Client Library -->
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
 
-    <!-- Load environment variables -->
     <script>
-        async function loadSupabaseKeys() {
+        // Initialize Supabase immediately
+        (async function initSupabase() {
             try {
                 const res = await fetch('/api/env');
-                if (res.ok) {
-                    const cfg = await res.json();
-                    if (cfg.supabaseUrl) window.SUPABASE_URL = cfg.supabaseUrl;
-                    if (cfg.supabaseAnonKey) window.SUPABASE_ANON_KEY = cfg.supabaseAnonKey;
-                        console.log('Env loaded in index:', { url: !!cfg.supabaseUrl, key: !!cfg.supabaseAnonKey });
+                const cfg = await res.json();
+                if (cfg.supabaseUrl && cfg.supabaseAnonKey) {
+                    window.supabase = window.supabase.createClient(cfg.supabaseUrl, cfg.supabaseAnonKey);
+                    console.log('Supabase initialized');
                 } else {
-                    console.error('Failed to load env in index:', res.status);
+                    console.error('Missing Supabase config');
                 }
             } catch (e) {
-                console.warn('Could not fetch supabase env:', e.message);
+                console.error('Supabase init error:', e);
             }
-        }
-        loadSupabaseKeys();
+        })();
     </script>
-
     <!-- Firebase scripts removed; Supabase is used instead -->
 
     <script>
         // ==================== CONFIGURATION ====================
-        // Firebase configuration was here but is no longer used.
-        // The app now uses Supabase; the block is retained as reference:
-        /*
-        const firebaseConfig = {
-            apiKey: "YOUR_API_KEY",
-            authDomain: "YOUR_PROJECT_ID.firebaseapp.com",
-            projectId: "YOUR_PROJECT_ID",
-            storageBucket: "YOUR_PROJECT_ID.appspot.com",
-            messagingSenderId: "YOUR_SENDER_ID",
-            appId: "YOUR_APP_ID"
-        };
-
-        // Initialize Firebase (uncomment when config is added)
-        // firebase.initializeApp(firebaseConfig);
-        // const auth = firebase.auth();
-        */
+        // Supabase is initialized at the bottom of this file
 
         // Demo mode (toggle to true for offline testing)
         let demoMode = false;
@@ -859,9 +841,23 @@
         }
 
         // ==================== LOGIN ====================
-        function handleLogin(e) {
+        async function handleLogin(e) {
             e.preventDefault();
-
+    
+            // Wait for Supabase to be ready
+            if (!window.supabase) {
+                showToast('Loading authentication... please wait', 'info');
+                // Wait up to 3 seconds for init
+                for (let i = 0; i < 30 && !window.supabase; i++) {
+                    await new Promise(r => setTimeout(r, 100));
+                }
+            }
+    
+            if (!window.supabase) {
+                showToast('Authentication failed to load. Please refresh.', 'error');
+                return;
+            }
+    
             const email = document.getElementById('loginEmail').value.trim();
             const password = document.getElementById('loginPassword').value;
 
@@ -873,10 +869,11 @@
                 hasError = true;
             } else {
                 showError('loginEmail', false);
-            }
+            }       
 
             if (password.length < 1) {
                 showError('loginPassword', true);
+                document.getElementById('loginPasswordError').textContent = 'Password is required';
                 hasError = true;
             } else {
                 showError('loginPassword', false);
@@ -905,14 +902,12 @@
                     }
                 }, 1000);
             } else {
-                const supabase = window.supabase;
-                supabase.auth.signInWithPassword({ email, password })
+                window.supabase.auth.signInWithPassword({ email, password })
                     .then(({ data, error }) => {
                         if (error) {
                             showToast(error.message, 'error');
                             setLoading('loginBtn', false);
                         } else {
-                            // signInWithPassword returns a session when successful
                             if (!data || !data.session) {
                                 showToast('Please verify your email first', 'error');
                                 setLoading('loginBtn', false);
@@ -1132,9 +1127,19 @@
             document.getElementById('forgotPasswordSection').classList.add('active');
         }
 
-        function handleForgotPassword(e) {
+        async function handleForgotPassword(e) {
             e.preventDefault();
-
+    
+            // Wait for Supabase
+            if (!window.supabase) {
+                await new Promise(r => setTimeout(r, 1000));
+            }
+    
+            if (!window.supabase) {
+                showToast('Authentication not ready', 'error');
+                return;
+            }
+    
             const email = document.getElementById('forgotEmail').value.trim();
 
             if (!validateEmail(email)) {
@@ -1253,7 +1258,5 @@
             });
         })();
     </script>
-        <!-- Initialize Supabase -->
-    <script src="./auth.js"></script>
 </body>
 </html>
