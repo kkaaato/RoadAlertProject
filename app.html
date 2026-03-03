@@ -213,6 +213,15 @@
             box-shadow: 0 4px 15px rgba(0,0,0,0.15);
             z-index: 1000;
             max-width: 220px;
+            transition: all 0.3s ease;
+            transform: translateX(0);
+            opacity: 1;
+        }
+
+        .legend.hidden {
+            transform: translateX(150%);
+            opacity: 0;
+            pointer-events: none;
         }
 
         .legend h4 {
@@ -233,6 +242,7 @@
             padding: 8px;
             border-radius: 10px;
             transition: all 0.2s;
+            cursor: pointer;
         }
 
         .legend-item:hover {
@@ -243,15 +253,79 @@
         .legend-item:active {
             transform: scale(0.98);
         }
-        .legend-icon {
-            width: 32px;
-            height: 32px;
+
+        /* Legend Close Button */
+        .legend-close {
+            position: absolute;
+            top: 10px;
+            right: 10px;
+            background: none;
+            border: none;
+            font-size: 1.2rem;
+            color: #999;
+            cursor: pointer;
+            width: 28px;
+            height: 28px;
             border-radius: 50%;
             display: flex;
             align-items: center;
             justify-content: center;
+            transition: all 0.2s;
+        }
+
+        .legend-close:hover {
+            background: #f0f0f0;
+            color: #666;
+        }
+
+        /* Legend Toggle Button (shows when legend is hidden) */
+        .legend-toggle-btn {
+            position: fixed;
+            bottom: 30px;
+            right: 30px;
+            width: 50px;
+            height: 50px;
+            border-radius: 50%;
+            background: white;
+            border: none;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.15);
+            cursor: pointer;
+            font-size: 1.4rem;
+            color: #00f260;
+            z-index: 999;
+            display: none;
+            align-items: center;
+            justify-content: center;
+            transition: all 0.3s;
+        }
+
+        .legend-toggle-btn:hover {
+            transform: scale(1.1);
+            background: #00f260;
             color: white;
-            font-size: 0.9rem;
+        }
+
+        .legend-toggle-btn.show {
+            display: flex;
+        }
+
+        /* When side panel is open, hide legend and show toggle further left */
+        .side-panel.open ~ .legend,
+        .side-panel.open ~ .legend-toggle-btn {
+            right: 420px; /* Move left of side panel */
+        }
+
+        @media (max-width: 968px) {
+        .side-panel.open ~ .legend,
+        .side-panel.open ~ .legend-toggle-btn {
+            right: 10px;
+            bottom: 100px; /* Move up on mobile */
+        }
+    
+        .legend {
+            max-width: 180px;
+            padding: 15px;
+        }
         }
 
         /* Modal */
@@ -728,35 +802,42 @@
         </button>
     </div>
 
-<!-- Legend -->
-<div class="legend">
-    <h4><i class="fas fa-info-circle"></i> Quick Report</h4>
-    <div class="legend-item" onclick="quickAddPin('flooding')" style="cursor: pointer;">
-        <div class="legend-icon" style="background: #2196f3;"><i class="fas fa-water"></i></div>
-        <span>Flooding</span>
+    <!-- Legend -->
+    <div class="legend" id="legend">
+        <button class="legend-close" onclick="toggleLegend()" title="Hide Legend">
+            <i class="fas fa-times"></i>
+        </button>
+        <h4><i class="fas fa-info-circle"></i> Quick Report</h4>
+        <div class="legend-item" onclick="quickAddPin('flooding')">
+            <div class="legend-icon" style="background: #2196f3;"><i class="fas fa-water"></i></div>
+                <span>Flooding</span>
+            </div>
+            <div class="legend-item" onclick="quickAddPin('rocky')">
+               <div class="legend-icon" style="background: #ff9800;"><i class="fas fa-mountain"></i></div>
+                  <span>Rocky Road</span>
+            </div>
+            <div class="legend-item" onclick="quickAddPin('construction')">
+                <div class="legend-icon" style="background: #e91e63;"><i class="fas fa-hard-hat"></i></div>
+                <span>Construction</span>
+                </div>
+                <div class="legend-item" onclick="quickAddPin('pothole')">
+                    <div class="legend-icon" style="background: #9c27b0;"><i class="fas fa-circle"></i></div>
+                    <span>Pothole</span>
+            </div>
+            <div class="legend-item" onclick="quickAddPin('blocked')">
+                <div class="legend-icon" style="background: #f44336;"><i class="fas fa-ban"></i></div>
+                <span>Blocked</span>
+            </div>
+            <div class="legend-item" onclick="quickAddPin('other')">
+                <div class="legend-icon" style="background: #4caf50;"><i class="fas fa-question"></i></div>
+                <span>Other</span>
+        </div>
     </div>
-    <div class="legend-item" onclick="quickAddPin('rocky')" style="cursor: pointer;">
-        <div class="legend-icon" style="background: #ff9800;"><i class="fas fa-mountain"></i></div>
-        <span>Rocky Road</span>
-    </div>
-    <div class="legend-item" onclick="quickAddPin('construction')" style="cursor: pointer;">
-        <div class="legend-icon" style="background: #e91e63;"><i class="fas fa-hard-hat"></i></div>
-        <span>Construction</span>
-    </div>
-    <div class="legend-item" onclick="quickAddPin('pothole')" style="cursor: pointer;">
-        <div class="legend-icon" style="background: #9c27b0;"><i class="fas fa-circle"></i></div>
-        <span>Pothole</span>
-    </div>
-    <div class="legend-item" onclick="quickAddPin('blocked')" style="cursor: pointer;">
-        <div class="legend-icon" style="background: #f44336;"><i class="fas fa-ban"></i></div>
-        <span>Blocked</span>
-    </div>
-    <div class="legend-item" onclick="quickAddPin('other')" style="cursor: pointer;">
-        <div class="legend-icon" style="background: #4caf50;"><i class="fas fa-question"></i></div>
-        <span>Other</span>
-    </div>
-</div>
 
+    <!-- Legend Toggle Button -->
+    <button class="legend-toggle-btn" id="legendToggleBtn" onclick="toggleLegend()" title="Show Legend">
+        <i class="fas fa-info-circle"></i>
+    </button>
     <!-- Add Pin Modal -->
     <div class="modal-overlay" id="pinModal">
         <div class="modal">
@@ -986,7 +1067,57 @@
         // Pre-select the type in the modal (will be set when modal opens)
         tempPinType = type;
         }
+        // ==================== LEGEND TOGGLE ====================
+        let legendVisible = true;
 
+        function toggleLegend() {
+            const legend = document.getElementById('legend');
+            const toggleBtn = document.getElementById('legendToggleBtn');
+    
+            legendVisible = !legendVisible;
+    
+            if (legendVisible) {
+                legend.classList.remove('hidden');
+                toggleBtn.classList.remove('show');
+            } else {
+                legend.classList.add('hidden');
+                toggleBtn.classList.add('show');
+            }
+        }
+
+        // Modify existing togglePanel function to also hide legend
+        const originalTogglePanel = togglePanel;
+            togglePanel = function() {
+        const sidePanel = document.getElementById('sidePanel');
+        const legend = document.getElementById('legend');
+        const toggleBtn = document.getElementById('legendToggleBtn');
+    
+        sidePanel.classList.toggle('open');
+    
+        // If opening panel, hide legend
+        if (sidePanel.classList.contains('open')) {
+            legend.classList.add('hidden');
+            legendVisible = false;
+            updatePinsList();
+        
+        // Generate QR code if needed
+        const panelQR = document.getElementById('panelQR');
+        if (panelQR && panelQR.innerHTML === '') {
+            const url = window.location.origin + '/index.html';
+            new QRCode(panelQR, {
+                text: url,
+                width: 130,
+                height: 130,
+                colorDark: '#667eea',
+                colorLight: '#ffffff'
+            });
+        }
+        } else {
+        // If closing panel, show legend again
+            legend.classList.remove('hidden');
+            legendVisible = true;
+        }
+    };
         // Store the pre-selected type
         let tempPinType = null;
         // ==================== MAP FUNCTIONS ====================
