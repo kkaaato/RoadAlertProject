@@ -750,6 +750,7 @@
 
         // ==================== UTILITY FUNCTIONS ====================
         function switchTab(tab) {
+            activeTab = tab;
             document.getElementById('loginSection').classList.add('hidden');
             document.getElementById('signupSection').classList.add('hidden');
             document.getElementById('verificationSection').classList.remove('active');

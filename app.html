@@ -1169,9 +1169,9 @@
         function toggleLegend() {
             const legend = document.getElementById('legend');
             const toggleBtn = document.getElementById('legendToggleBtn');
-    
+
             legendVisible = !legendVisible;
-    
+
             if (legendVisible) {
                 legend.classList.remove('hidden');
                 toggleBtn.classList.remove('show');
@@ -1181,41 +1181,9 @@
             }
         }
 
-        // Modify existing togglePanel function to also hide legend
-        const originalTogglePanel = togglePanel;
-            togglePanel = function() {
-        const sidePanel = document.getElementById('sidePanel');
-        const legend = document.getElementById('legend');
-        const toggleBtn = document.getElementById('legendToggleBtn');
-    
-        sidePanel.classList.toggle('open');
-    
-        // If opening panel, hide legend
-        if (sidePanel.classList.contains('open')) {
-            legend.classList.add('hidden');
-            legendVisible = false;
-            updatePinsList();
-        
-        // Generate QR code if needed
-        const panelQR = document.getElementById('panelQR');
-        if (panelQR && panelQR.innerHTML === '') {
-            const url = window.location.origin + '/index.html';
-            new QRCode(panelQR, {
-                text: url,
-                width: 130,
-                height: 130,
-                colorDark: '#667eea',
-                colorLight: '#ffffff'
-            });
-        }
-        } else {
-        // If closing panel, show legend again
-            legend.classList.remove('hidden');
-            legendVisible = true;
-        }
-    };
         // Store the pre-selected type
         let tempPinType = null;
+
         // ==================== MAP FUNCTIONS ====================
         function initMap() {
             try {
@@ -1405,34 +1373,26 @@
             pinsData[pin.id] = pin;
         }
 
-                // ...existing code...
-            <!-- Supabase Client Library -->
-            <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
-        <!-- ...existing code... -->
-            <script>
-            // ...existing code...
-        
-            function createPopupContent(pin) {
-                const config = pinConfigs[pin.type];
-                const expiresIn = Math.ceil((new Date(pin.expires_at || pin.expiresAt) - new Date()) / (1000 * 60 * 60 * 24));
-                const isOwner = currentUser && (pin.created_by === currentUser.uid);
+        function createPopupContent(pin) {
+            const config = pinConfigs[pin.type];
+            const expiresIn = Math.ceil((new Date(pin.expires_at || pin.expiresAt) - new Date()) / (1000 * 60 * 60 * 24));
+            const isOwner = currentUser && (pin.created_by === currentUser.uid);
 
-                let content = `
-            <div style="min-width: 240px;">
+            let content = `
+            <div style="min-width:240px;">
                 <div style="background: ${config.color}; color: white; padding: 8px 14px; border-radius: 20px; font-weight: bold; display: inline-block; margin-bottom: 10px;">
                     <i class="fas ${config.icon}"></i> ${config.label}
                 </div>
                 <p style="margin: 10px 0; color: #333;">${pin.description || 'No description'}</p>
                 <div style="font-size: 0.9rem; color: #666; margin-bottom: 10px;">
-                    <i class="fas fa-user"></i> <strong>${pin.created_by_name || 'Unknown'}</strong> ${isOwner ? '<span style="color: #00f260;">(You)</span>' : ''}<br>
+                    <i class="fas fa-user"></i> <strong>${pin.created_by_name || pin.createdByName || 'Unknown'}</strong> ${isOwner ? '<span style="color: #00f260;">(You)</span>' : ''}<br>
                     <i class="fas fa-clock"></i> Expires in ${expiresIn} days
                 </div>
-            </div>
-        `;
+            `;
 
-        if (!isOwner) {
-            const userVote = pin.voters && currentUser ? pin.voters[currentUser.uid] : null;
-            content += `
+            if (!isOwner) {
+                const userVote = pin.voters && currentUser ? pin.voters[currentUser.uid] : null;
+                content += `
                 <div style="display:flex; gap:10px; margin-top:15px;">
                     <button onclick="votePin('${pin.id}', 'up')"
                         style="flex:1; padding:10px; border:none; border-radius:10px; cursor:pointer; background:${userVote === 'up' ? '#4caf50' : '#e8f5e9'}; color:${userVote === 'up' ? 'white' : '#2e7d32'}; font-weight:600;">
@@ -1444,8 +1404,8 @@
                     </button>
                 </div>
             `;
-        } else {
-            content += `
+            } else {
+                content += `
                 <div style="display:flex; gap:10px; margin-top:15px; padding:10px; background:#f5f5f5; border-radius:10px; text-align:center;">
                     <div style="flex:1; color:#27ae60; font-weight:600;">
                         <i class="fas fa-thumbs-up"></i> ${pin.upvotes || 0} Confirms
@@ -1458,25 +1418,361 @@
                     You cannot vote on your own report
                 </p>
             `;
-        }
+            }
 
-        if (isOwner) {
-            content += `
+            if (isOwner) {
+                content += `
                 <button onclick="deletePin('${pin.id}')"
                     style="width:100%; margin-top:12px; padding:10px; border:none; border-radius:10px; cursor:pointer; background:#ffebee; color:#c62828; font-weight:600;">
                     <i class="fas fa-trash"></i> Remove Report
                 </button>
             `;
+            }
+
+            content += '</div>';
+            return content;
         }
 
-        content += '</div>';
-        return content;
-    }
+        function votePin(pinId, voteType) {
+            const pin = pinsData[pinId];
+            if (!pin) return;
 
-    // Removed stray QRCode block / extra braces that were outside any function
-    // ...existing code...
+            const previousVote = pin.voters[currentUser.uid];
+
+            if (previousVote === 'up') pin.upvotes--;
+            if (previousVote === 'down') pin.downvotes--;
+
+            if (previousVote === voteType) {
+                delete pin.voters[currentUser.uid];
+            } else {
+                pin.voters[currentUser.uid] = voteType;
+                if (voteType === 'up') pin.upvotes++;
+                if (voteType === 'down') pin.downvotes++;
+            }
+
+            if (pin.downvotes > pin.upvotes && pin.downvotes >= 3) {
+                removePin(pinId, 'disapproved');
+                showToast('Report removed due to community disapproval');
+            } else {
+                updatePin(pin);
+            }
+        }
+
+        function deletePin(pinId) {
+            if (confirm('Are you sure you want to remove this report?')) {
+                removePin(pinId, 'deleted');
+                showToast('Report removed successfully');
+            }
+        }
+
+        function removePin(pinId, reason) {
+            demoPins = demoPins.filter(p => p.id !== pinId);
+            if (markers[pinId]) {
+                map.removeLayer(markers[pinId]);
+                delete markers[pinId];
+                delete pinsData[pinId];
+            }
+            updatePinsList();
+            updateStats();
+        }
+
+        function updatePin(pin) {
+            const index = demoPins.findIndex(p => p.id === pin.id);
+            if (index !== -1) {
+                demoPins[index] = pin;
+                pinsData[pin.id] = pin;
+                if (markers[pin.id]) {
+                    markers[pin.id].setPopupContent(createPopupContent(pin));
+                }
+            }
+        }
+
+                function loadPins() {
+            if (!demoMode) {
+                // Use supabaseClient
+                if (!supabaseClient) {
+                    console.error('Supabase not initialized, retrying in 1s...');
+                    setTimeout(loadPins, 1000);
+                    return;
+                }
+                
+                supabaseClient.from('pins').select('*')
+                    .then(({ data, error }) => {
+                        if (error) {
+                            console.error('failed to load pins', error.message);
+                            return;
+                        }
+                        data.forEach(pin => {
+                            addPinToMap(pin);
+                            pinsData[pin.id] = pin;
+                        });
+                        updateStats();
+                    });
+                return;
+            }
+            // Demo pins around Philippines
+            const demoData = [
+                {
+                    id: 'demo_1',
+                    type: 'flooding',
+                    description: 'Heavy flooding during rainy season. Use alternate route via Marcos Highway.',
+                    lat: 14.5995,
+                    lng: 120.9842,
+                    created_by: 'demo_user1',
+                    created_by_name: 'Juan Dela Cruz',
+                    created_at: new Date(Date.now() - 2 * 24 * 60 * 60 * 1000).toISOString(),
+                    expires_at: new Date(Date.now() + 5 * 24 * 60 * 60 * 1000).toISOString(),
+                    duration: 7,
+                    upvotes: 5,
+                    downvotes: 0,
+                    voters: {},
+                    status: 'active'
+                },
+                {
+                    id: 'demo_2',
+                    type: 'construction',
+                    description: 'DPWH road repair ongoing. Expect 30-45 min delays during rush hour.',
+                    lat: 14.605,
+                    lng: 120.99,
+                    created_by: 'demo_user2',
+                    created_by_name: 'Maria Santos',
+                    created_at: new Date(Date.now() - 1 * 24 * 60 * 60 * 1000).toISOString(),
+                    expires_at: new Date(Date.now() + 13 * 24 * 60 * 60 * 1000).toISOString(),
+                    duration: 14,
+                    upvotes: 3,
+                    downvotes: 1,
+                    voters: {},
+                    status: 'active'
+                },
+                {
+                    id: 'demo_3',
+                    type: 'pothole',
+                    description: 'Multiple deep potholes. Hazardous for motorcycles.',
+                    lat: 14.595,
+                    lng: 120.978,
+                    created_by: 'demo_user3',
+                    created_by_name: 'Pedro Reyes',
+                    created_at: new Date(Date.now() - 5 * 60 * 60 * 1000).toISOString(),
+                    expires_at: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString(),
+                    duration: 7,
+                    upvotes: 8,
+                    downvotes: 0,
+                    voters: {},
+                    status: 'active'
+                }
+            ];
+
+            demoPins = demoData;
+            demoData.forEach(pin => addPinToMap(pin));
+            updatePinsList();
+            updateStats();
+        }
+
+        function updatePinsExpiry() {
+            const now = new Date();
+            Object.values(pinsData).forEach(pin => {
+                if (new Date(pin.expiresAt) < now && pin.status === 'active') {
+                    removePin(pin.id, 'expired');
+                }
+            });
+        }
+
+        function updatePinsList() {
+            const container = document.getElementById('pinsList');
+    
+            // Filter pins based on active tab
+            let filteredPins = Object.values(pinsData).filter(p => p.status === 'active');
+    
+            if (activeTab === 'mine') {
+                filteredPins = filteredPins.filter(p => p.created_by === currentUser.uid);
+            }
+    
+            if (filteredPins.length === 0) {
+                const emptyMessage = activeTab === 'mine' 
+                    ? "You haven't created any reports yet"
+                    : "No active reports in this area";
+                container.innerHTML = `
+                    <div class="empty-state">
+                        <i class="fas fa-inbox"></i>
+                    <p>${emptyMessage}</p>
+                </div>`;
+            return;
+        }
+    
+            filteredPins.sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
+
+            container.innerHTML = filteredPins.map(pin => {
+                const config = pinConfigs[pin.type];
+                const expiresIn = Math.ceil((new Date(pin.expiresAt) - new Date()) / (1000 * 60 * 60 * 24));
+                const isOwner = currentUser && (pin.created_by === currentUser.uid);
+
+                return `
+                    <div class="pin-card" onclick="focusPin('${pin.id}')">
+                        <div class="pin-header">
+                            <span class="pin-type-badge ${pin.type}">
+                                <i class="fas ${config.icon}"></i> ${config.label}
+                            </span>
+                            <small style="color: #666;">${expiresIn}d left</small>
+                        </div>
+                        <p class="pin-description">${pin.description || 'No description'}</p>
+                        <div class="pin-meta">
+                            <span>
+                                <i class="fas fa-user"></i> 
+                                <strong>${pin.created_by_name || pin.createdByName || 'Unknown'}</strong>
+                                ${isOwner ? '<span style="color: #00f260;">(You)</span>' : ''}
+                            </span>
+                            <span><i class="fas fa-thumbs-up"></i> ${pin.upvotes || 0}</span>
+                        </div>
+                    </div>
+                `;
+        }).join('');
+        }
+
+        function focusPin(pinId) {
+            const pin = pinsData[pinId];
+            if (pin) {
+                map.setView([pin.lat, pin.lng], 17);
+                markers[pinId].openPopup();
+                document.getElementById('sidePanel').classList.remove('open');
+            }
+        }
+
+        function updateStats() {
+            const activeCount = Object.values(pinsData).filter(p => p.status === 'active').length;
+            document.getElementById('activePinsCount').textContent = activeCount;
+
+            const contributors = new Set(Object.values(pinsData).map(p => p.created_by));
+            document.getElementById('contributorsCount').textContent = contributors.size;
+        }
+
+        function togglePanel() {
+            const sidePanel = document.getElementById('sidePanel');
+            const legend = document.getElementById('legend');
+            const toggleBtn = document.getElementById('legendToggleBtn');
+
+            sidePanel.classList.toggle('open');
+
+            // If opening panel, hide legend
+            if (sidePanel.classList.contains('open')) {
+                legend.classList.add('hidden');
+                legendVisible = false;
+                updatePinsList(); // Refresh list when opening
+
+                // Generate QR code if needed
+            const panelQR = document.getElementById('panelQR');
+            if (panelQR && panelQR.innerHTML === '') {
+                const url = window.location.origin + '/index.html';
+                new QRCode(panelQR, {
+                    text: url,
+                    width: 130,
+                    height: 130,
+                    colorDark: '#667eea',
+                    colorLight: '#ffffff'
+                });
+                }
+            } else {
+             // If closing panel, show legend again
+                legend.classList.remove('hidden');
+                legendVisible = true;
+            }
+        }
+
+        function switchTab(tab) {
+            activeTab = tab;
+            
+            // Update tab styling
+            document.querySelectorAll('.panel-tab').forEach(t => {
+                t.classList.toggle('active', t.dataset.tab === tab);
+            });
+            
+            // Update panel title
+            const panelTitle = document.getElementById('panelTitle');
+            if (panelTitle) {
+                panelTitle.textContent = tab === 'mine' ? 'My Reports' : 'Active Reports';
+            }
+            
+            updatePinsList();
+        }
+
+        function locateUser() {
+            if (navigator.geolocation) {
+                navigator.geolocation.getCurrentPosition(
+                    (position) => {
+                        const lat = position.coords.latitude;
+                        const lng = position.coords.longitude;
+                        map.setView([lat, lng], 15);
+
+                        L.marker([lat, lng], {
+                            icon: L.divIcon({
+                                className: 'user-location',
+                                html: '<div style="background: #00f260; width: 22px; height: 22px; border-radius: 50%; border: 4px solid white; box-shadow: 0 0 15px rgba(0, 242, 96, 0.6);"></div>',
+                                iconSize: [22, 22],
+                                iconAnchor: [11, 11]
+                            })
+                        }).addTo(map).bindPopup('You are here').openPopup();
+
+                        showToast('Location found!');
+                    },
+                    (error) => {
+                        showToast('Using default location (Manila)', 'info');
+                    }
+                );
+            }
+        }
+
+        function changeMapTheme() {
+            const themes = Object.keys(mapThemes);
+            const currentIndex = themes.indexOf(currentMapTheme);
+            const nextIndex = (currentIndex + 1) % themes.length;
+            const nextTheme = themes[nextIndex];
+
+            map.removeLayer(mapLayers[currentMapTheme]);
+            mapLayers[nextTheme].addTo(map);
+            currentMapTheme = nextTheme;
+
+            showToast(`Switched to ${mapThemes[nextTheme].name} view`);
+        }
+
+        function showQRCode() {
+            const modal = document.getElementById('qrModal');
+            const container = document.getElementById('qrcode');
+            const url = window.location.origin + '/index.html';
+
+            document.getElementById('currentUrl').textContent = url;
+            container.innerHTML = '';
+
+            new QRCode(container, {
+                text: url,
+                width: 200,
+                height: 200,
+                colorDark: '#667eea',
+                colorLight: '#ffffff'
+            });
+
+            modal.style.display = 'flex';
+        }
+
+        function closeQRModal() {
+            document.getElementById('qrModal').style.display = 'none';
+        }
+
+        function showToast(message, type = 'success') {
+            const toast = document.getElementById('toast');
+            toast.textContent = message;
+            toast.className = 'toast ' + type;
+            toast.classList.add('show');
+
+            setTimeout(() => {
+                toast.classList.remove('show');
+            }, 3000);
+        }
+
+        // Close modals on outside click
+        window.onclick = function(event) {
+            if (event.target.classList.contains('modal-overlay')) {
+                event.target.style.display = 'none';
+            }
+        }
     </script>
-        // ...existing code...
-        </script>
-    </body>
+</body>
 </html>
