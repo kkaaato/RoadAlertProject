@@ -692,6 +692,25 @@
             transform: scale(1.05); 
         }
 
+        /* time adjustments */
+                .time-adjusted {
+            animation: pulse-green 1s ease;
+        }
+        
+        .time-reduced {
+            animation: pulse-red 1s ease;
+        }
+        
+        @keyframes pulse-green {
+            0%, 100% { color: #666; }
+            50% { color: #27ae60; transform: scale(1.1); }
+        }
+        
+        @keyframes pulse-red {
+            0%, 100% { color: #666; }
+            50% { color: #e74c3c; transform: scale(1.1); }
+        }
+
         /* QR Section */
         .qr-section {
             text-align: center;
@@ -1443,28 +1462,56 @@
             return content;
         }
 
-        function votePin(pinId, voteType) {
+                function votePin(pinId, voteType) {
             const pin = pinsData[pinId];
             if (!pin) return;
 
             const previousVote = pin.voters[currentUser.uid];
+            const HOURS_TO_MS = 60 * 60 * 1000; // 2 hours in milliseconds
+            const TIME_ADJUSTMENT = 2 * HOURS_TO_MS; // +2 or -2 hours
 
-            if (previousVote === 'up') pin.upvotes--;
-            if (previousVote === 'down') pin.downvotes--;
-
-            if (previousVote === voteType) {
-                delete pin.voters[currentUser.uid];
-            } else {
-                pin.voters[currentUser.uid] = voteType;
-                if (voteType === 'up') pin.upvotes++;
-                if (voteType === 'down') pin.downvotes++;
+            // Remove previous vote effect
+            if (previousVote === 'up') {
+                pin.upvotes--;
+                // Remove the +2 hours we previously added
+                pin.expires_at = new Date(new Date(pin.expires_at) - TIME_ADJUSTMENT).toISOString();
+            }
+            if (previousVote === 'down') {
+                pin.downvotes--;
+                // Remove the -2 hours we previously subtracted
+                pin.expires_at = new Date(new Date(pin.expires_at) + TIME_ADJUSTMENT).toISOString();
             }
 
+            // Apply new vote
+            if (previousVote === voteType) {
+                // Toggle off - remove vote completely
+                delete pin.voters[currentUser.uid];
+            } else {
+                // Add new vote with time adjustment
+                pin.voters[currentUser.uid] = voteType;
+                if (voteType === 'up') {
+                    pin.upvotes++;
+                    // Add +2 hours to pin lifetime
+                    pin.expires_at = new Date(new Date(pin.expires_at) + TIME_ADJUSTMENT).toISOString();
+                    showToast('You confirmed this report! +2 hours added');
+                } else {
+                    pin.downvotes++;
+                    // Subtract -2 hours from pin lifetime
+                    pin.expires_at = new Date(new Date(pin.expires_at) - TIME_ADJUSTMENT).toISOString();
+                    showToast('You disputed this report! -2 hours removed');
+                }
+            }
+
+            // Check if pin should be removed (more downvotes than upvotes and at least 3 downvotes)
             if (pin.downvotes > pin.upvotes && pin.downvotes >= 3) {
                 removePin(pinId, 'disapproved');
                 showToast('Report removed due to community disapproval');
             } else {
                 updatePin(pin);
+                // Refresh popup to show new time
+                if (markers[pinId]) {
+                    markers[pinId].setPopupContent(createPopupContent(pin));
+                }
             }
         }
 
