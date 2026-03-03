@@ -1,34 +1,61 @@
-// auth.js - Simple Supabase initialization
-const SUPABASE_URL = window.SUPABASE_URL || 'YOUR_SUPABASE_URL_HERE';
-const SUPABASE_ANON_KEY = window.SUPABASE_ANON_KEY || 'YOUR_SUPABASE_ANON_KEY_HERE';
+// auth.js - Supabase initialization with retry logic
 
-let supabase = null;
+(function() {
+    // Prevent double initialization
+    if (window.authJsInitialized) {
+        console.log('auth.js already initialized, skipping');
+        return;
+    }
+    window.authJsInitialized = true;
 
-function initSupabase() {
-    if (typeof supabase !== 'undefined' && supabase && supabase.from) {
-        return supabase;
-    }
-    
-    // Load from CDN if not already loaded
-    if (typeof window.createClient === 'undefined') {
-        console.error('Supabase library not loaded');
-        return null;
-    }
-    
-    try {
-        supabase = window.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
-        window.supabase = supabase;
-        console.log('Supabase initialized');
-        return supabase;
-    } catch (err) {
-        console.error('Supabase init failed:', err);
-        return null;
-    }
-}
+    let initAttempts = 0;
+    const maxAttempts = 10;
 
-// Auto-init when DOM ready
-if (document.readyState === 'loading') {
-    document.addEventListener('DOMContentLoaded', initSupabase);
-} else {
-    initSupabase();
-}
+    function tryInitSupabase() {
+        initAttempts++;
+        
+        // Check if Supabase library is loaded
+        if (typeof window.supabase === 'undefined' || !window.supabase.createClient) {
+            if (initAttempts < maxAttempts) {
+                console.log(`Waiting for Supabase library... attempt ${initAttempts}`);
+                setTimeout(tryInitSupabase, 200);
+                return;
+            }
+            console.error('Supabase library failed to load');
+            return;
+        }
+
+        // Check if env vars are loaded
+        const url = window.SUPABASE_URL;
+        const key = window.SUPABASE_ANON_KEY;
+
+        if (!url || !key) {
+            if (initAttempts < maxAttempts) {
+                console.log(`Waiting for env vars... attempt ${initAttempts}`);
+                setTimeout(tryInitSupabase, 200);
+                return;
+            }
+            console.error('Supabase env vars not found after retries');
+            // Use fallback for testing (replace with your actual values)
+            console.warn('Add fallback values or check /api/env endpoint');
+            return;
+        }
+
+        // Initialize client
+        try {
+            const client = window.supabase.createClient(url, key);
+            window.supabaseClient = client;
+            window.supabase = client; // For backward compatibility
+            console.log('Supabase initialized successfully');
+        } catch (err) {
+            console.error('Failed to create Supabase client:', err);
+        }
+    }
+
+    // Start initialization
+    if (document.readyState === 'loading') {
+        document.addEventListener('DOMContentLoaded', tryInitSupabase);
+    } else {
+        tryInitSupabase();
+    }
+})();
