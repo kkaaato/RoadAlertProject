@@ -1079,6 +1079,7 @@
         let demoMode = false; // set true only for offline testing
         let demoPins = [];
         let activeTab = 'all';
+        const intervals = [];
 
         // Map themes
         const mapThemes = {
@@ -1120,37 +1121,34 @@
         }
 
         document.addEventListener('DOMContentLoaded', async function() {
-            // Wait a moment for all scripts to load
             await new Promise(r => setTimeout(r, 500));
-    
+
             await checkAuth();
             initMap();
             loadPins();
-    
-            setInterval(updatePinsExpiry, 60000);
-                        setInterval(() => {
+
+            intervals.push(setInterval(updatePinsExpiry, 60000));           // was: setInterval(updatePinsExpiry, 60000)
+            intervals.push(setInterval(() => {                               // was: setInterval(() => {
                 document.getElementById('lastUpdate').textContent = 'Just now';
-            }, 30000);
+            }, 30000));
+            intervals.push(setInterval(() => {                               // was: setInterval(() => {
+                document.querySelectorAll('.countdown').forEach(el => {
+                    const expires = el.dataset.expires;
+                    if (expires) el.textContent = formatCountdown(expires);
+                });
+            }, 1000));
+            intervals.push(setInterval(updateLocalTime, 1000));             // was: setInterval(updateLocalTime, 1000)
 
-            // Start live countdown updater
-            // Update countdowns every second for smoother display
-        setInterval(() => {
-            document.querySelectorAll('.countdown').forEach(el => {
-                const expires = el.dataset.expires;
-                if (expires) {
-                    el.textContent = formatCountdown(expires);
-                }
-            });
-        }, 1000); // Update every second
-            // Add local time display
-            setInterval(updateLocalTime, 1000); // Update every second
-            updateLocalTime(); // Initial call
-            // Subscribe to realtime updates
+            updateLocalTime();
             subscribeToPinUpdates();
+            intervals.push(setInterval(() => {                                   // was: setInterval(() => {
+            refreshPinsFromServer();
+            }, 10000));
         });
-        
-        
-
+        window.addEventListener('beforeunload', () => {
+        intervals.forEach(clearInterval);
+        });
+    
         async function checkAuth() {
         // Wait for Supabase to be ready
         let attempts = 0;
@@ -1569,8 +1567,8 @@
                 showToast('Failed to save vote', 'error');
                 await refreshPinsFromServer();
 
-                if (error) {
-                    console.error('Failed to save vote:', error);
+                if (err) {
+                    console.error('Failed to save vote:', err);
                     showToast('Failed to save vote', 'error');
                     return;
                 }
