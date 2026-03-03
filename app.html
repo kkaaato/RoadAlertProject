@@ -1307,7 +1307,7 @@
         status: pinData.status || 'active'
     };
 
-    sb.from('pins').insert(dbPinData)  // Use dbPinData instead of pinData
+    sb.from('pins').insert(dbPinData).select()
     .then(({ data, error }) => {
         if (error) {
             console.error('insert pin error', error.message);
