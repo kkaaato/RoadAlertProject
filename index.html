@@ -687,44 +687,62 @@
         </div>
     </div>
 
-        <!-- Supabase Client Library -->
+    <!-- Supabase Client Library - Load BEFORE your scripts -->
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
 
     <script>
-    (async function initSupabaseSafe(){
-        // Don't override existing globals or redeclare identifiers
-        if (window.supabaseClient) return;
+        // ==================== SUPABASE INITIALIZATION ====================
+        // The UMD build exposes 'supabase' globally with createClient as named export
+        let supabaseClient = null;
+        let supabaseInitialized = false;
 
-        if (!window.supabase || typeof window.supabase.createClient !== 'function') {
-            console.warn('Supabase UMD not found. Ensure the <script> src for supabase is loaded.');
-            return;
-        }
+        async function initializeSupabase() {
+            if (supabaseInitialized) return true;
+            
+            try {
+                // Wait for the supabase global object to be available
+                if (typeof supabase === 'undefined' || !supabase.createClient) {
+                    console.error('Supabase library not loaded');
+                    return false;
+                }
 
-        try {
-            const res = await fetch('/api/env').catch(() => null);
-            const cfg = res ? await res.json() : {};
-            const url = cfg.supabaseUrl || cfg.SUPABASE_URL || '';
-            const key = cfg.supabaseAnonKey || cfg.SUPABASE_ANON_KEY || '';
+                // Fetch environment variables from your API
+                const res = await fetch('/api/env').catch(() => null);
+                if (!res) {
+                    console.error('Failed to fetch env config');
+                    return false;
+                }
+                
+                const cfg = await res.json();
+                const url = cfg.supabaseUrl || cfg.SUPABASE_URL || '';
+                const key = cfg.supabaseAnonKey || cfg.SUPABASE_ANON_KEY || '';
 
-            if (!url || !key) {
-                console.warn('Supabase config missing; skipping client creation.');
-                return;
+                if (!url || !key) {
+                    console.error('Missing Supabase credentials');
+                    return false;
+                }
+
+                // Create client using the UMD pattern: supabase.createClient
+                supabaseClient = supabase.createClient(url, key);
+                
+                // Expose globally for compatibility with existing code
+                window.supabaseClient = supabaseClient;
+                window.supabase = supabaseClient;
+                
+                supabaseInitialized = true;
+                console.log('Supabase initialized successfully');
+                return true;
+                
+            } catch (err) {
+                console.error('Supabase initialization error:', err);
+                return false;
             }
-
-            // Create client and store it on window under a new name to avoid collisions
-            window.supabaseClient = window.supabase.createClient(url, key);
-            console.log('supabaseClient initialized');
-        } catch (err) {
-            console.error('Supabase init error:', err);
         }
-    })();
-    </script>
 
-    <script>
+        // Initialize immediately
+        initializeSupabase();
+
         // ==================== CONFIGURATION ====================
-        // Supabase is initialized at the bottom of this file
-
-        // Demo mode (toggle to true for offline testing)
         let demoMode = false;
         let demoUsers = JSON.parse(localStorage.getItem('demoUsers') || '[]');
         let pendingVerificationEmail = null;
@@ -748,26 +766,21 @@
         function togglePassword(inputId, icon) {
             const input = document.getElementById(inputId);
             if (!input) return;
-            // resolve icon element if not provided
             if (!icon) {
                 icon = document.querySelector('i.toggle-password[data-target="' + inputId + '"]');
             }
-            // Toggle: if password, show it; if text, hide it
             const isCurrentlyPassword = input.type === 'password';
             input.type = isCurrentlyPassword ? 'text' : 'password';
-            // After toggle, update icon to reflect new state
             if (icon && icon.classList) {
-                icon.classList.toggle('fa-eye', !isCurrentlyPassword);      // show eye when text is visible
-                icon.classList.toggle('fa-eye-slash', isCurrentlyPassword);  // show eye-slash when hidden
+                icon.classList.toggle('fa-eye', !isCurrentlyPassword);
+                icon.classList.toggle('fa-eye-slash', isCurrentlyPassword);
             }
         }
 
-        // Attach click handlers to icons with data-target for robust toggle
         function attachPasswordToggleHandlers() {
             document.querySelectorAll('i.toggle-password[data-target]').forEach(icon => {
                 const target = icon.getAttribute('data-target');
                 const input = document.getElementById(target);
-                // Set initial icon state based on input type
                 if (input) {
                     const isPassword = input.type === 'password';
                     icon.classList.toggle('fa-eye', !isPassword);
@@ -780,6 +793,7 @@
                 }, false);
             });
         }
+
         if (document.readyState === 'loading') {
             document.addEventListener('DOMContentLoaded', attachPasswordToggleHandlers);
         } else {
@@ -787,7 +801,6 @@
         }
 
         function validateEmail(email) {
-            // Must be a valid Gmail address
             return /^[^\s@]+@gmail\.com$/.test(email);
         }
 
@@ -809,7 +822,8 @@
                 inputEl.classList.toggle('success', show);
                 inputEl.classList.remove('error');
             }
-        }
+
+                    }
 
         function setLoading(btnId, loading) {
             const btn = document.getElementById(btnId);
@@ -846,6 +860,7 @@
                     document.getElementById('signupEmailSuccess').textContent = 'Gmail address is available!';
                 }
             } else {
+                showError('signupEmail', false);
                 showSuccess('signupEmail', true);
                 document.getElementById('signupEmailSuccess').textContent = 'Gmail address looks good!';
             }
@@ -855,20 +870,15 @@
         async function handleLogin(e) {
             e.preventDefault();
     
-            // Wait for Supabase to be ready
-            if (!window.supabase) {
-                showToast('Loading authentication... please wait', 'info');
-                // Wait up to 3 seconds for init
-                for (let i = 0; i < 30 && !window.supabase; i++) {
-                    await new Promise(r => setTimeout(r, 100));
+            // Ensure Supabase is initialized
+            if (!supabaseInitialized) {
+                const initialized = await initializeSupabase();
+                if (!initialized) {
+                    showToast('Authentication system not ready. Please refresh.', 'error');
+                    return;
                 }
             }
-    
-            if (!window.supabase) {
-                showToast('Authentication failed to load. Please refresh.', 'error');
-                return;
-            }
-    
+
             const email = document.getElementById('loginEmail').value.trim();
             const password = document.getElementById('loginPassword').value;
 
@@ -913,7 +923,8 @@
                     }
                 }, 1000);
             } else {
-                window.supabase.auth.signInWithPassword({ email, password })
+                // Use the initialized client
+                supabaseClient.auth.signInWithPassword({ email, password })
                     .then(({ data, error }) => {
                         if (error) {
                             showToast(error.message, 'error');
@@ -926,6 +937,11 @@
                                 window.location.href = 'app.html';
                             }
                         }
+                    })
+                    .catch(err => {
+                        console.error('Login error:', err);
+                        showToast('Login failed. Please try again.', 'error');
+                        setLoading('loginBtn', false);
                     });
             }
         }
@@ -964,7 +980,6 @@
                 showError('signupPassword', false);
             }
 
-            // CRITICAL: Check confirm password BEFORE proceeding
             if (!confirmPassword) {
                 showError('signupConfirmPassword', true);
                 document.getElementById('signupConfirmPasswordError').textContent = 'Please confirm your password';
@@ -977,7 +992,6 @@
                 showError('signupConfirmPassword', false);
             }
 
-            // Check if email exists
             if (demoMode && demoUsers.some(u => u.email === email)) {
                 showError('signupEmail', true);
                 document.getElementById('signupEmailError').textContent = 'This email is already registered';
@@ -1009,9 +1023,7 @@
                     setLoading('signupBtn', false);
                 }, 1000);
             } else {
-                // Use server-side admin create so we avoid email verification requirement
                 try {
-                    // double-check confirm password before sending to server
                     if (password !== confirmPassword) {
                         showToast('Passwords do not match', 'error');
                         setLoading('signupBtn', false);
@@ -1057,7 +1069,6 @@
             input.value = input.value.replace(/[^0-9]/g, '');
         }
 
-        // Live confirm-password validation
         function attachConfirmPasswordValidation() {
             const pwd = document.getElementById('signupPassword');
             const confirm = document.getElementById('signupConfirmPassword');
@@ -1073,6 +1084,7 @@
                 confirm.addEventListener('input', checker);
             }
         }
+
         if (document.readyState === 'loading') {
             document.addEventListener('DOMContentLoaded', attachConfirmPasswordValidation);
         } else {
@@ -1141,16 +1153,15 @@
         async function handleForgotPassword(e) {
             e.preventDefault();
     
-            // Wait for Supabase
-            if (!window.supabase) {
-                await new Promise(r => setTimeout(r, 1000));
+            // Ensure Supabase is initialized
+            if (!supabaseInitialized) {
+                const initialized = await initializeSupabase();
+                if (!initialized) {
+                    showToast('Authentication system not ready. Please refresh.', 'error');
+                    return;
+                }
             }
-    
-            if (!window.supabase) {
-                showToast('Authentication not ready', 'error');
-                return;
-            }
-    
+
             const email = document.getElementById('forgotEmail').value.trim();
 
             if (!validateEmail(email)) {
@@ -1176,8 +1187,7 @@
                     setLoading('forgotBtn', false);
                 }, 1500);
             } else {
-                const supabase = window.supabase;
-                supabase.auth.resetPasswordForEmail(email)
+                supabaseClient.auth.resetPasswordForEmail(email)
                     .then(({ data, error }) => {
                         if (error) {
                             showError('forgotEmail', true);
@@ -1188,6 +1198,11 @@
                             document.getElementById('resetSuccessSection').classList.add('active');
                             showToast('Reset link sent!', 'success');
                         }
+                        setLoading('forgotBtn', false);
+                    })
+                    .catch(err => {
+                        console.error('Password reset error:', err);
+                        showToast('Failed to send reset link', 'error');
                         setLoading('forgotBtn', false);
                     });
             }
@@ -1224,23 +1239,18 @@
                 toast.remove();
             }, 3000);
         }
-
-        // On index.html, simply show the login form.
-        // Redirect only happens after user successfully logs in.
-        // (Removed auto-redirect to prevent loop)
     </script>
+    
     <script>
         // Robust fallback: attach click listeners to any element with data-switch
         (function(){
             function safeSwitch(tab){
                 try{
-                    // existing global function if defined
                     if (typeof switchTab === 'function') {
                         switchTab(tab);
                         console.log('safeSwitch: used existing switchTab for', tab);
                         return;
                     }
-                    // fallback implementation
                     document.getElementById('loginSection').classList.add('hidden');
                     document.getElementById('signupSection').classList.add('hidden');
                     document.getElementById('verificationSection').classList.remove('active');
@@ -1256,7 +1266,6 @@
 
             document.addEventListener('click', function(e){
                 var el = e.target;
-                // walk up to find element with data-switch
                 while(el && el !== document.body){
                     var target = el.getAttribute && el.getAttribute('data-switch');
                     if (target){

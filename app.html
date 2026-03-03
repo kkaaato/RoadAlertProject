@@ -17,28 +17,58 @@
     <!-- Supabase Client Library -->
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
 
-    <!-- Load environment variables -->
-    <script>
-        async function loadEnv() {
-            try {
-                const res = await fetch('/api/env');
-                if (res.ok) {
-                    const cfg = await res.json();
-                    if (cfg.supabaseUrl) window.SUPABASE_URL = cfg.supabaseUrl;
-                    if (cfg.supabaseAnonKey) window.SUPABASE_ANON_KEY = cfg.supabaseAnonKey;
-                    console.log('Env loaded:', { url: !!cfg.supabaseUrl, key: !!cfg.supabaseAnonKey });
-                } else {
-                    console.error('Failed to load env:', res.status);
-                }
-            } catch (e) {
-                console.error('Env load error:', e);
-            }
-        }
-        loadEnv();
-    </script>
+        <!-- Supabase Client Library -->
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
 
     <!-- Initialize Supabase -->
-    <script src="./auth.js"></script>
+    <script>
+        // ==================== SUPABASE INITIALIZATION ====================
+        let supabaseClient = null;
+        let supabaseInitialized = false;
+
+        async function initializeSupabase() {
+            if (supabaseInitialized) return true;
+            
+            try {
+                // Check if Supabase library loaded
+                if (typeof supabase === 'undefined' || !supabase.createClient) {
+                    console.error('Supabase library not loaded');
+                    return false;
+                }
+
+                const res = await fetch('/api/env').catch(() => null);
+                if (!res) {
+                    console.error('Failed to fetch env config');
+                    return false;
+                }
+                
+                const cfg = await res.json();
+                const url = cfg.supabaseUrl || cfg.SUPABASE_URL || '';
+                const key = cfg.supabaseAnonKey || cfg.SUPABASE_ANON_KEY || '';
+
+                if (!url || !key) {
+                    console.error('Missing Supabase credentials');
+                    return false;
+                }
+
+                // Create client using UMD pattern: supabase.createClient
+                supabaseClient = supabase.createClient(url, key);
+                window.supabase = supabaseClient; // For backward compatibility
+                window.supabaseClient = supabaseClient;
+                
+                supabaseInitialized = true;
+                console.log('Supabase initialized successfully');
+                return true;
+                
+            } catch (err) {
+                console.error('Supabase initialization error:', err);
+                return false;
+            }
+        }
+
+        // Initialize immediately
+        initializeSupabase();
+    </script>
 
     <style>
         * {
@@ -1017,46 +1047,68 @@
         });
         
         async function checkAuth() {
-            if (demoMode) {
-                const userData = localStorage.getItem('currentUser');
-                if (!userData) {
-                    window.location.href = 'index.html';
-                    return;
-                }
-                currentUser = JSON.parse(userData);
-                document.getElementById('userDisplay').textContent = currentUser.displayName || currentUser.email;
-            } else {
-                const sb = window.supabase;
-                if (!sb) {
-                    console.error('Supabase not initialized; cannot check auth');
-                    window.location.href = 'index.html';
-                    return;
-                }
-                try {
-                    const { data: { session }, error } = await sb.auth.getSession();
-                    if (error) throw error;
-                    if (!session || !session.user) {
-                        window.location.href = 'index.html';
-                        return;
-                    }
-                    currentUser = {
-                        uid: session.user.id,
-                        email: session.user.email,
-                        displayName: session.user.user_metadata?.username || session.user.email
-                    };
-                    document.getElementById('userDisplay').textContent = currentUser.displayName;
-                } catch (err) {
-                    console.error('checkAuth error:', err.message);
-                    window.location.href = 'index.html';
-                }
-            }
+        // Wait for Supabase to be ready
+        let attempts = 0;
+        while (!supabaseInitialized && attempts < 30) {
+            await new Promise(r => setTimeout(r, 100));
+            attempts++;
         }
+    
+        if (demoMode) {
+            const userData = localStorage.getItem('currentUser');
+            if (!userData) {
+                window.location.href = 'index.html';
+                return;
+            }
+            currentUser = JSON.parse(userData);
+            document.getElementById('userDisplay').textContent = currentUser.displayName || currentUser.email;
+            return;
+        }
+    
+        // Use supabaseClient instead of window.supabase
+        const sb = supabaseClient;
+    
+        if (!sb) {
+            console.error('Supabase not initialized; cannot check auth');
+            window.location.href = 'index.html';
+            return;
+        }
+    
+        try {
+            const { data: { session }, error } = await sb.auth.getSession();
+        
+            if (error) {
+                console.error('Session error:', error);
+                window.location.href = 'index.html';
+                return;
+            }
+        
+            if (!session || !session.user) {
+                console.log('No session, redirecting to login');
+                window.location.href = 'index.html';
+                return;
+            }
+        
+            currentUser = {
+                uid: session.user.id,
+                email: session.user.email,
+                displayName: session.user.user_metadata?.username || session.user.email
+            };
+        
+            document.getElementById('userDisplay').textContent = currentUser.displayName;
+            console.log('Auth success:', currentUser);
+        
+        } catch (err) {
+            console.error('checkAuth error:', err);
+            window.location.href = 'index.html';
+        }
+    }
 
         async function logout() {
             if (demoMode) {
                 localStorage.removeItem('currentUser');
-            } else if (window.supabase) {
-                await window.supabase.auth.signOut();
+            } else if (supabaseClient) {
+                await supabaseClient.auth.signOut();
             }
             window.location.href = 'index.html';
         }
@@ -1233,13 +1285,13 @@
         }
 
         function savePin(pinData) {
-        // Use window.supabase instead of supabase
-            const sb = window.supabase;
+            // Use supabaseClient instead of window.supabase
+            const sb = supabaseClient;
     
             if (!sb) {
                 console.error('Supabase not initialized');
                 showToast('Database connection failed', 'error');
-            return;
+                return;
             }
     
             sb.from('pins').insert(pinData)
@@ -1415,10 +1467,16 @@
             }
         }
 
-        function loadPins() {
+                function loadPins() {
             if (!demoMode) {
-                const supabase = window.supabase;
-                supabase.from('pins').select('*')
+                // Use supabaseClient
+                if (!supabaseClient) {
+                    console.error('Supabase not initialized, retrying in 1s...');
+                    setTimeout(loadPins, 1000);
+                    return;
+                }
+                
+                supabaseClient.from('pins').select('*')
                     .then(({ data, error }) => {
                         if (error) {
                             console.error('failed to load pins', error.message);
