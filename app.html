@@ -858,6 +858,10 @@
             <i class="fas fa-clock" style="color: #f39c12;"></i>
             <span id="lastUpdate">Just now</span>
         </div>
+        <div class="stat">
+            <i class="fas fa-clock" style="color: #f39c12;"></i>
+            <span id="localTime">--:--</span>
+        </div>
     </div>
 
     <!-- Map -->
@@ -1105,15 +1109,20 @@
             }, 30000);
 
             // Start live countdown updater
-            setInterval(() => {
-                document.querySelectorAll('.countdown').forEach(el => {
-                    const expires = el.dataset.expires;
-                    if (expires) {
-                        el.textContent = formatCountdown(expires);
-                    }
-                });
-            }, 60000); // Update every minute
+            // Update countdowns every second for smoother display
+        setInterval(() => {
+            document.querySelectorAll('.countdown').forEach(el => {
+                const expires = el.dataset.expires;
+                if (expires) {
+                    el.textContent = formatCountdown(expires);
+                }
+            });
+        }, 1000); // Update every second
+            // Add local time display
+            setInterval(updateLocalTime, 1000); // Update every second
+            updateLocalTime(); // Initial call
         });
+        
 
         async function checkAuth() {
         // Wait for Supabase to be ready
@@ -1461,14 +1470,22 @@
             content += '</div>';
             return content;
         }
-
             async function votePin(pinId, voteType) {
-    const pin = pinsData[pinId];
-    if (!pin) return;
+                const pin = pinsData[pinId];
+                if (!pin) return;             
+                
+                const previousVote = pin.voters ? pin.voters[currentUser.uid] : null;
+                const HOURS_TO_MS = 60 * 60 * 1000;
+                const TIME_ADJUSTMENT = 2 * HOURS_TO_MS;
 
-    const previousVote = pin.voters ? pin.voters[currentUser.uid] : null;
-    const HOURS_TO_MS = 60 * 60 * 1000;
-    const TIME_ADJUSTMENT = 2 * HOURS_TO_MS;
+                // After adjusting time in votePin()
+                const timeElement = document.querySelector(`[data-pin-id="${pinId}"] .countdown`);
+                if (timeElement) {
+                    timeElement.classList.add(voteType === 'up' ? 'time-adjusted' : 'time-reduced');
+                    setTimeout(() => {
+                    timeElement.classList.remove('time-adjusted', 'time-reduced');
+                    }, 1000);
+                }
 
     // Remove previous vote effect
     if (previousVote === 'up') {
@@ -1537,35 +1554,32 @@
         showToast('Failed to save vote', 'error');
     }
 }
-        async function votePin(pinId, voteType) {
-            // ... (the new async version with Supabase save) ...
-        }
 
         async function deletePin(pinId) {
-            if (confirm('Are you sure you want to remove this report?')) {
-                await removePin(pinId, 'deleted');
-            }
+        if (confirm('Are you sure you want to remove this report?')) {
+            await removePin(pinId, 'deleted');
         }
-
-        async function removePin(pinId, reason) {
-            // ... (the Supabase delete version) ...
-        }
-            
-        async function deletePin(pinId) {
-    if (confirm('Are you sure you want to remove this report?')) {
-        await removePin(pinId, 'deleted');
     }
-}
 
         async function removePin(pinId, reason) {
     // Delete from Supabase
     try {
-        await supabaseClient
+        const { error } = await supabaseClient
             .from('pins')
             .delete()
             .eq('id', pinId);
+            
+        if (error) {
+            console.error('Failed to delete pin:', error);
+            showToast('Failed to delete report', 'error');
+            return;
+        }
+        
+        showToast(reason === 'deleted' ? 'Report removed' : 'Report expired', 'success');
     } catch (e) {
         console.error('Failed to delete pin:', e);
+        showToast('Failed to delete report', 'error');
+        return;
     }
 
     // Remove from local map
@@ -1577,6 +1591,9 @@
     
     updatePinsList();
     updateStats();
+    
+    // Close popup if open
+    map.closePopup();
 }
 
         function updatePin(pin) {
@@ -1735,17 +1752,35 @@
             const now = new Date();
             const expiry = new Date(expiresAt);
             const diff = expiry - now;
-            
-            if (diff <= 0) return 'Expired';
-            
+    
+           if (diff <= 0) return 'Expired';
+    
             const days = Math.floor(diff / (1000 * 60 * 60 * 24));
             const hours = Math.floor((diff % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60));
             const minutes = Math.floor((diff % (1000 * 60 * 60)) / (1000 * 60));
-            
-            if (days > 0) return `${days}d ${hours}h left`;
-            if (hours > 0) return `${hours}h ${minutes}m left`;
-            return `${minutes}m left`;
+            const seconds = Math.floor((diff % (1000 * 60)) / 1000);
+    
+            if (days > 0) return `${days}d ${hours}h ${minutes}m`;
+            if (hours > 0) return `${hours}h ${minutes}m ${seconds}s`;
+            if (minutes > 0) return `${minutes}m ${seconds}s`;
+            return `${seconds}s`;
         }
+
+        function getLocalTimeString() {
+        const now = new Date();
+        return now.toLocaleTimeString('en-US', { 
+            hour: '2-digit', 
+            minute: '2-digit',
+            hour12: true 
+        });
+    }
+
+        function updateLocalTime() {
+            const timeDisplay = document.getElementById('localTime');
+            if (timeDisplay) {
+                timeDisplay.textContent = getLocalTimeString();
+        }
+    }
 
         function focusPin(pinId) {
             const pin = pinsData[pinId];
