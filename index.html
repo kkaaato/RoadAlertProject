@@ -1293,7 +1293,9 @@
                     setLoading('forgotBtn', false);
                 }, 1500);
             } else {
-                supabaseClient.auth.resetPasswordForEmail(email)
+                    supabaseClient.auth.resetPasswordForEmail(email, {
+            redirectTo: window.location.origin + '/index.html'
+        })
                     .then(({ data, error }) => {
                         if (error) {
                             showError('forgotEmail', true);
