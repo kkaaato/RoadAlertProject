@@ -811,42 +811,179 @@
 
         /* Responsive */
         @media (max-width: 968px) {
-            .side-panel {
-                width: 100%;
-                right: -100%;
-            }
 
-            .legend {
-                bottom: 100px;
-                right: 10px;
-                font-size: 0.85rem;
-                padding: 15px;
-                max-width: 180px;
-            }
+        /* ── Stats bar: scroll horizontally instead of overflowing ── */
+        .stats-bar {
+            left: 0;
+            right: 0;
+            transform: none;
+            width: 100%;
+            top: 62px;
+            border-radius: 0;
+            padding: 8px 16px;
+            gap: 16px;
+            font-size: 0.8rem;
+            overflow-x: auto;
+            white-space: nowrap;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.08);
+            /* Hide scrollbar but keep scrollable */
+            scrollbar-width: none;
+            -ms-overflow-style: none;
+        }
+        .stats-bar::-webkit-scrollbar { display: none; }
 
-            .stats-bar {
-                font-size: 0.85rem;
-                gap: 15px;
-                padding: 10px 20px;
-                top: 75px;
-            }
+        .stat { display: inline-flex; flex-shrink: 0; }
+        .stat-value { font-size: 1rem; }
 
-            .map-controls {
-                bottom: 20px;
-                left: 20px;
-            }
+        /* Push map down to account for taller header + stats bar */
+        #map { margin-top: 100px; height: calc(100vh - 100px); }
 
-            .control-btn {
-                width: 55px;
-                height: 55px;
-            }
-
-            .user-info span {
-                display: none;
-            }
+        /* ── Map controls: bigger tap targets, reorganized ── */
+        .map-controls {
+            bottom: 16px;
+            left: 12px;
+            gap: 10px;
         }
 
-        .hidden { display: none !important; }
+        .control-btn {
+            width: 52px;
+            height: 52px;
+            font-size: 1.3rem;
+            /* Ensure minimum touch target */
+            min-width: 44px;
+           min-height: 44px;
+        }
+
+        .add-pin-btn {
+            width: 58px;
+            height: 58px;
+            font-size: 1.6rem;
+        }
+
+        /* ── Side panel: true full-screen bottom sheet on mobile ── */
+        .side-panel {
+            width: 100%;
+            height: 85vh;          /* Takes up most of screen */
+            top: unset;
+            bottom: -85vh;         /* Hidden below screen */
+            right: 0;
+            left: 0;
+            border-radius: 20px 20px 0 0;
+            box-shadow: 0 -4px 20px rgba(0,0,0,0.15);
+            transition: bottom 0.35s ease;
+            padding: 20px 18px;
+        }
+
+        .side-panel.open {
+            bottom: 0;
+            right: 0;   /* Override desktop rule */
+        }
+
+        /* Drag handle indicator at top of sheet */
+        .panel-header::before {
+            content: '';
+            display: block;
+            width: 40px;
+            height: 4px;
+            background: #ddd;
+            border-radius: 4px;
+         margin: -8px auto 14px;
+        }
+
+        .panel-header h3 { font-size: 1.2rem; }
+
+        /* ── Legend: move above map controls when visible ── */
+        .legend {
+            bottom: 90px;
+            right: 12px;
+            max-width: 170px;
+            padding: 14px;
+            font-size: 0.85rem;
+        }
+
+        .legend-item { padding: 6px; margin-bottom: 6px; }
+
+        .legend-toggle-btn {
+            bottom: 90px;
+            right: 12px;
+        }
+
+        /* Legend stays in place when panel is open (panel covers it) */
+        .side-panel.open ~ .legend,
+        .side-panel.open ~ .legend-toggle-btn {
+            right: 12px;
+            bottom: 90px;
+        }
+
+        /* ── Popups: larger text, bigger buttons, easier to tap ── */
+        .leaflet-popup-content {
+            font-size: 1rem !important;
+            min-width: 260px !important;
+            max-width: 88vw !important;
+            padding: 4px 2px;
+        }
+
+        .leaflet-popup-content button {
+            min-height: 46px !important;
+            font-size: 1rem !important;
+            border-radius: 12px !important;
+            padding: 12px !important;
+        }
+
+        /* Popup close button — bigger tap area */
+        .leaflet-popup-close-button {
+            font-size: 1.5rem !important;
+           width: 36px !important;
+           height: 36px !important;
+           line-height: 36px !important;
+           top: 4px !important;
+            right: 4px !important;
+        }
+
+        /* ── Modal: full width, bottom-anchored on mobile ── */
+        .modal {
+            width: 96%;
+            padding: 24px 18px;
+            border-radius: 20px 20px 0 0;
+            position: fixed;
+            bottom: 0;
+            margin: 0;
+            max-height: 92vh;
+        }
+
+        .modal-overlay {
+            align-items: flex-end !important;
+        }
+
+        .pin-types {
+            grid-template-columns: repeat(3, 1fr);
+            gap: 8px;
+        }
+
+        .pin-type {
+            padding: 12px 6px;
+        }
+
+        .pin-type i { font-size: 1.5rem; }
+        .pin-type span { font-size: 0.8rem; }
+
+        .btn-primary {
+            min-height: 52px;
+           font-size: 1rem;
+        }
+
+        .btn-secondary {
+            min-height: 48px;
+            font-size: 1rem;
+        }
+
+        /* Header: tighter on mobile */
+        .header { padding: 12px 16px; }
+        .logo { font-size: 1.3rem; gap: 8px; }
+        .logo i { font-size: 1.5rem; }
+        .user-info span { display: none; }
+        .btn-logout { padding: 8px 14px; font-size: 0.85rem; }
+    }
     </style>
 <base target="_blank">
 </head>

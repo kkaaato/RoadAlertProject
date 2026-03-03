@@ -434,38 +434,115 @@
 
         /* Responsive */
         @media (max-width: 968px) {
-            body {
-                flex-direction: column;
-            }
-
-            .branding {
-                padding: 30px 20px;
-                min-height: 250px;
-            }
-
-            .brand-title {
-                font-size: 2.5rem;
-            }
-
-            .brand-tagline {
-                font-size: 1.1rem;
-                margin-bottom: 20px;
-            }
-
-            .features {
-                display: none;
-            }
-
-            .auth-container {
-                padding: 30px 20px;
-            }
-
-            .legal-footer {
-                position: relative;
-                margin-top: 30px;
-                padding: 0 20px;
-            }
+        body {
+            flex-direction: column;
+            min-height: 100vh;
         }
+
+        /* Shrink the branding section to a compact header */
+        .branding {
+            padding: 24px 20px 20px;
+            min-height: unset;
+            flex: 0 0 auto;
+        }
+
+        .logo {
+            font-size: 3.5rem;
+            margin-bottom: 10px;
+        }
+
+        .brand-title {
+            font-size: 2rem;
+            margin-bottom: 8px;
+        }
+
+        .brand-tagline {
+            font-size: 1rem;
+            margin-bottom: 0;
+            opacity: 0.85;
+        }
+
+        .features {
+            display: none;
+        }
+
+        /* Auth container fills remaining space */
+        .auth-container {
+            flex: 1;
+            padding: 28px 20px 80px; /* bottom padding for legal footer */
+            justify-content: flex-start;
+            overflow-y: auto;
+        }
+
+        .auth-box {
+            max-width: 100%;
+        }
+
+        .auth-header h1 {
+            font-size: 1.7rem;
+        }
+
+        .auth-header p {
+            font-size: 1rem;
+        }
+
+        /* Bigger tap targets for tabs */
+        .auth-tab {
+            padding: 16px 10px;
+           font-size: 1rem;
+           min-height: 50px;
+        }
+
+        /* Bigger input fields */
+        .form-group input {
+            padding: 17px 45px 17px 50px;
+            font-size: 1rem;
+            min-height: 54px;
+        }
+
+        /* Bigger primary button — most important tap target */
+        .btn-primary {
+            padding: 18px;
+            font-size: 1.1rem;
+            min-height: 56px;
+            border-radius: 14px;
+        }
+
+        /* Bigger secondary button */
+        .btn-secondary {
+            padding: 16px;
+            font-size: 1rem;
+            min-height: 52px;
+            border-radius: 14px;
+        }
+
+        /* Icons inside inputs — keep vertically centered */
+        .input-wrapper > i:first-child,
+        .toggle-password {
+            font-size: 1.2rem;
+        }
+
+        /* Verification code inputs — bigger on mobile */
+        .verification-code {
+           gap: 8px;
+        }   
+
+        .verification-code input {
+            width: 44px;
+            height: 56px;
+            font-size: 1.3rem;
+            border-radius: 10px;
+        }
+
+        /* Legal footer — relative so it doesn't overlap content */
+        .legal-footer {
+            position: relative;
+            bottom: unset;
+            margin-top: 24px;
+           padding: 0 10px;
+            font-size: 0.75rem;
+        }
+    }
     </style>
 <base target="_self">
 </head>
