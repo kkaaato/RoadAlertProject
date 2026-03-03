@@ -1289,6 +1289,11 @@
         window.addEventListener('beforeunload', () => {
         intervals.forEach(clearInterval);
         });
+        document.addEventListener('visibilitychange', () => {
+            if (document.visibilityState === 'visible') {
+        refreshPinsFromServer();
+        }
+        });
     
         async function checkAuth() {
         // Wait for Supabase to be ready
