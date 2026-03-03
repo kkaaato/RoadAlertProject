@@ -403,10 +403,6 @@
             align-items: center;
             backdrop-filter: blur(5px);
         }
-        /* When modal is shown, use flex to center */
-        .modal-overlay[style*="flex"] {
-            display: flex !important;
-        }
 
         .modal {
             background: white;
@@ -418,19 +414,6 @@
             animation: slideIn 0.3s ease;
             max-height: 90vh;
             overflow-y: auto;
-        }
-
-        #qrModal {
-            display: none;
-            align-items: center;
-            justify-content: center;
-        }
-
-        #qrModal .modal {
-            margin: auto;
-            position: relative;
-            top: 50%;
-            transform: translateY(-50%);
         }
 
         @keyframes slideIn {
