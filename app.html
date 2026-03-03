@@ -1121,7 +1121,10 @@
             // Add local time display
             setInterval(updateLocalTime, 1000); // Update every second
             updateLocalTime(); // Initial call
+            // Subscribe to realtime updates
+            subscribeToPinUpdates();
         });
+        
         
 
         async function checkAuth() {
@@ -1473,7 +1476,7 @@
             async function votePin(pinId, voteType) {
                 const pin = pinsData[pinId];
                 if (!pin) return;             
-                
+
                 const previousVote = pin.voters ? pin.voters[currentUser.uid] : null;
                 const HOURS_TO_MS = 60 * 60 * 1000;
                 const TIME_ADJUSTMENT = 2 * HOURS_TO_MS;
@@ -1686,6 +1689,59 @@
             demoData.forEach(pin => addPinToMap(pin));
             updatePinsList();
             updateStats();
+        }
+        
+        function subscribeToPinUpdates() {
+            if (!supabaseClient) {
+                console.log('Supabase not ready for realtime');
+                return;
+            }
+            
+            console.log('Setting up realtime subscriptions...');
+            
+            supabaseClient
+                .channel('pins-channel')
+                .on('postgres_changes', 
+                    { event: '*', schema: 'public', table: 'pins' },
+                    (payload) => {
+                        console.log('Realtime update:', payload);
+                        
+                        if (payload.eventType === 'INSERT') {
+                            const newPin = payload.new;
+                            if (!pinsData[newPin.id]) {
+                                addPinToMap(newPin);
+                                pinsData[newPin.id] = newPin;
+                                updateStats();
+                                updatePinsList();
+                                showToast('New report added!', 'info');
+                            }
+                        }
+                        else if (payload.eventType === 'UPDATE') {
+                            const updatedPin = payload.new;
+                            pinsData[updatedPin.id] = updatedPin;
+                            if (markers[updatedPin.id]) {
+                                markers[updatedPin.id].setPopupContent(createPopupContent(updatedPin));
+                            }
+                            updatePinsList();
+                        }
+                        else if (payload.eventType === 'DELETE') {
+                            const deletedPin = payload.old;
+                            if (pinsData[deletedPin.id]) {
+                                if (markers[deletedPin.id]) {
+                                    map.removeLayer(markers[deletedPin.id]);
+                                    delete markers[deletedPin.id];
+                                }
+                                delete pinsData[deletedPin.id];
+                                updateStats();
+                                updatePinsList();
+                                showToast('A report was removed', 'info');
+                            }
+                        }
+                    }
+                )
+                .subscribe((status) => {
+                    console.log('Realtime subscription status:', status);
+                });
         }
 
         function updatePinsExpiry() {
