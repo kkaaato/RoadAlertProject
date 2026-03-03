@@ -420,6 +420,19 @@
             overflow-y: auto;
         }
 
+        #qrModal {
+            display: none;
+            align-items: center;
+            justify-content: center;
+        }
+
+        #qrModal .modal {
+            margin: auto;
+            position: relative;
+            top: 50%;
+            transform: translateY(-50%);
+        }
+
         @keyframes slideIn {
             from { transform: translateY(-50px); opacity: 0; }
             to { transform: translateY(0); opacity: 1; }
