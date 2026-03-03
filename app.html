@@ -1266,15 +1266,15 @@
                 description: description,
                 lat: tempMarker.lat,
                 lng: tempMarker.lng,
-                createdBy: currentUser.uid,
-                createdByName: currentUser.displayName || currentUser.email,
-                createdAt: new Date().toISOString(),
-                expiresAt: new Date(Date.now() + duration * 24 * 60 * 60 * 1000).toISOString(),
+               created_by: currentUser.uid,
+            created_by_name: currentUser.displayName || currentUser.email,  // ✅ Add this
+                created_at: new Date().toISOString(),
+                expires_at: new Date(Date.now() + duration * 24 * 60 * 60 * 1000).toISOString(),
                 duration: duration,
                 upvotes: 0,
                 downvotes: 0,
-                voters: {},
-                status: 'active'
+               voters: {},
+               status: 'active'
             };
 
             savePin(pinData);
@@ -1363,22 +1363,22 @@
 
         function createPopupContent(pin) {
             const config = pinConfigs[pin.type];
-            const expiresIn = Math.ceil((new Date(pin.expiresAt) - new Date()) / (1000 * 60 * 60 * 24));
-            const isOwner = pin.createdBy === currentUser.uid;
+            const expiresIn = Math.ceil((new Date(pin.expires_at) - new Date()) / (1000 * 60 * 60 * 24));
+            const isOwner = pin.created_by === currentUser.uid;
 
-            let content = `
-                <div style="min-width: 240px; max-width: 300px; font-family: inherit;">
-                    <div style="display: flex; align-items: center; gap: 10px; margin-bottom: 12px;">
-                        <div style="background: ${config.color}; color: white; padding: 8px 14px; border-radius: 20px; font-size: 0.9rem; font-weight: bold;">
-                            <i class="fas ${config.icon}"></i> ${config.label}
-                        </div>
-                    </div>
-                    <p style="margin: 12px 0; color: #333; font-size: 1rem; line-height: 1.5;">${pin.description || 'No description provided'}</p>
-                    <div style="font-size: 0.9rem; color: #666; margin-bottom: 15px; line-height: 1.7;">
-                        <i class="fas fa-user"></i> ${pin.createdByName} ${isOwner ? '<span style="color: #00f260; font-weight: 600;">(You)</span>' : ''}<br>
-                        <i class="fas fa-clock"></i> Expires in ${expiresIn} day${expiresIn !== 1 ? 's' : ''}
-                    </div>
-            `;
+            return `
+                <div style="min-width: 240px;">
+                    <div style="background: ${config.color}; color: white; padding: 8px 14px; border-radius: 20px; font-weight: bold; display: inline-block; margin-bottom: 10px;">
+                    <i class="fas ${config.icon}"></i> ${config.label}
+                </div>
+                <p style="margin: 10px 0; color: #333;">${pin.description || 'No description'}</p>
+                <div style="font-size: 0.9rem; color: #666; margin-bottom: 10px;">
+                    <i class="fas fa-user"></i> <strong>${pin.created_by_name || 'Unknown'}</strong> ${isOwner ? '<span style="color: #00f260;">(You)</span>' : ''}<br>
+                    <i class="fas fa-clock"></i> Expires in ${expiresIn} days
+                </div>
+        </div>
+    `;
+}
 
             // Only show voting buttons if user is NOT the owner
             if (!isOwner) {
@@ -1587,8 +1587,8 @@
 
             container.innerHTML = activePins.map(pin => {
                 const config = pinConfigs[pin.type];
-                const expiresIn = Math.ceil((new Date(pin.expiresAt) - new Date()) / (1000 * 60 * 60 * 24));
-                const isOwner = pin.createdBy === currentUser.uid;
+                const expiresIn = Math.ceil((new Date(pin.expires_at) - new Date()) / (1000 * 60 * 60 * 24));
+                const isOwner = pin.created_by === currentUser.uid;
 
                 return `
                     <div class="pin-card" onclick="focusPin('${pin.id}')">
@@ -1596,16 +1596,20 @@
                             <span class="pin-type-badge ${pin.type}">
                                 <i class="fas ${config.icon}"></i> ${config.label}
                             </span>
-                            <small style="color: #666; font-weight: 600;">${expiresIn}d left</small>
+                            <small style="color: #666;">${expiresIn}d left</small>
                         </div>
                         <p class="pin-description">${pin.description || 'No description'}</p>
                         <div class="pin-meta">
-                            <span><i class="fas fa-user"></i> ${pin.createdByName} ${isOwner ? '(You)' : ''}</span>
-                            <span><i class="fas fa-thumbs-up"></i> ${pin.upvotes}</span>
+                            <span>
+                                <i class="fas fa-user"></i> 
+                                <strong>${pin.created_by_name || 'Unknown'}</strong>
+                                ${isOwner ? '<span style="color: #00f260;">(You)</span>' : ''}
+                            </span>
+                            <span><i class="fas fa-thumbs-up"></i> ${pin.upvotes || 0}</span>
                         </div>
                     </div>
                 `;
-            }).join('');
+        }).join('');
         }
 
         function focusPin(pinId) {
