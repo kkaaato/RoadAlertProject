@@ -1049,10 +1049,12 @@
 
     <!-- Legend -->
     <div class="legend" id="legend">
-        <button class="legend-close" onclick="toggleLegend()" title="Hide Legend">
-            <i class="fas fa-times"></i>
-        </button>
-        <h4><i class="fas fa-info-circle"></i> Quick Report</h4>
+        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px;">
+            <h4 style="margin:0;"><i class="fas fa-info-circle"></i> Quick Report</h4>
+            <button class="legend-close" onclick="toggleLegend()" title="Hide Legend" style="position:static;margin-left:8px;">
+                <i class="fas fa-times"></i>
+            </button>
+        </div>
         <div class="legend-item" onclick="quickAddPin('flooding')">
             <div class="legend-icon" style="background: #2196f3;"><i class="fas fa-water"></i></div>
                 <span>Flooding</span>
@@ -1420,10 +1422,6 @@
                 // Map click for adding pins
                 map.on('click', function(e) {
                     if (isAddingPin) {
-                        if (!isInPhilippines(e.latlng.lat, e.latlng.lng)) {
-                            showPhilippinesWarning();
-                            return;
-                        }
                         showPinModal(e.latlng);
                     }
                 });
@@ -1439,25 +1437,6 @@
                     '<div style="display:flex;justify-content:center;align-items:center;height:100%;color:#666;">' +
                     '<p>Failed to load map. Please refresh.</p></div>';
             }
-        }
-
-        // Philippines bounding box (covers all major island groups including Batanes to Tawi-Tawi)
-        const PH_BOUNDS = { north: 21.12, south: 4.64, west: 116.93, east: 126.61 };
-
-        function isInPhilippines(lat, lng) {
-            return lat >= PH_BOUNDS.south && lat <= PH_BOUNDS.north &&
-                   lng >= PH_BOUNDS.west  && lng <= PH_BOUNDS.east;
-        }
-
-        function showPhilippinesWarning() {
-            const existing = document.getElementById('phWarningToast');
-            if (existing) existing.remove();
-            const toast = document.createElement('div');
-            toast.id = 'phWarningToast';
-            toast.innerHTML = `<i class="fas fa-flag" style="color:#f39c12;font-size:1.1rem;"></i><div><strong style="display:block;margin-bottom:2px;">Philippines Only</strong><span style="font-size:0.85rem;opacity:0.9;">RoadAlert is limited to the Philippines. Please click within the Philippine archipelago.</span></div>`;
-            toast.style.cssText = "position:fixed;bottom:80px;left:50%;transform:translateX(-50%);background:#1a1a2e;color:white;padding:14px 20px;border-radius:14px;display:flex;align-items:flex-start;gap:12px;z-index:9999;box-shadow:0 6px 24px rgba(0,0,0,0.35);border-left:4px solid #f39c12;max-width:320px;pointer-events:none;";
-            document.body.appendChild(toast);
-            setTimeout(() => { toast.style.transition="opacity 0.4s"; toast.style.opacity="0"; setTimeout(()=>toast.remove(),400); }, 3500);
         }
 
         function startAddingPin() {
